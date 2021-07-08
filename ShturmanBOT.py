@@ -1,7 +1,6 @@
 from bot import DiscordBot
 import configparser
 
-# Comment!
 # another comment!
 
 # Loads up the configparser to read our login file
