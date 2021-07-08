@@ -1,7 +1,6 @@
 from bot import DiscordBot
 import configparser
 
-
 # Loads up the configparser to read our login file
 config = configparser.ConfigParser()
 config.read('config')
