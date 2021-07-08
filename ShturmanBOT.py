@@ -1,7 +1,7 @@
 from bot import DiscordBot
 import configparser
 
-# another comment!
+# test ssh
 
 # Loads up the configparser to read our login file
 config = configparser.ConfigParser()
