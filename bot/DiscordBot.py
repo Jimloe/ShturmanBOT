@@ -12,7 +12,6 @@ from discord import Embed, Member
 from bot import shturclass, reddit_login
 from typing import Optional
 
-
 # Loads up the configparser to read our login file
 # and build our variables
 config = configparser.ConfigParser()
@@ -25,46 +24,8 @@ redditauth = reddit_login.reddit_auth()
 @client.event
 async def on_ready():
     print("Shturman is running!")
-    guild = client.get_guild(340973813238071298)  # Reddit Mod server guild
-    mqchannel = client.get_channel(475755886825177098)  # Reddit Chat Channel
-    modmention = guild.get_role(386999610117324800)  # Moderator Role ID
-    mqcd = 0
-    umcd = 0
-    while True:
-        nettest = False  # Checking for network connectivity
-        while not nettest:
-            try:
-                mqcounter = 0
-                umcounter = 0
-                subreddit = await redditauth.subreddit(subredditname)  # Set our subreddit
-                modmail = await subreddit.modmail.unread_count()
-                async for item in subreddit.mod.modqueue(limit=None):  # Build our Mod Queue #s
-                    mqcounter += 1
-                async for item in subreddit.mod.unmoderated(limit=None):  # Build our Unmoderated #s
-                    umcounter += 1
-                mmcounter = modmail["new"]
-                discordactivity = f"R:{mqcounter} Q:{umcounter} M:{mmcounter}"  # Update Discord status
-                activity = discord.Activity(name=discordactivity, type=discord.ActivityType.watching)
-                if mqcounter >= 35 and mqcd == 0:
-                    await mqchannel.send(f"\n{modmention.mention}, the MQ is over 35!")
-                    mqcd = 1
-                if umcounter >= 35 and umcd == 0:
-                    await mqchannel.send(f"\n{modmention.mention}, the UM is over 35!")
-                    umcd = 1
-                await client.change_presence(activity=activity)
-                if (mqcounter <= 3) and (mqcd == 1):
-                    print("Resetting MQ cooldown")
-                    mqcd = 0
-                if (umcounter <= 3) and (umcd == 1):
-                    print("Resetting UM cooldown")
-                    umcd = 0
-                await asyncio.sleep(30)
-                nettest = True
-            except:
-                print(f'Que watcher || Trying again in 30s')
-                activity = discord.Activity(name="connection to Reddit", type=discord.ActivityType.watching)
-                await client.change_presence(activity=activity)
-                await asyncio.sleep(30)
+    activity = discord.Activity(name="for commands", type=discord.ActivityType.watching)
+    await client.change_presence(activity=activity)
 
 
 @client.command(aliases=['hi', 'yo', 'hey'])
@@ -79,6 +40,65 @@ async def hello(ctx):
 async def bye(ctx):
     randbye = random.choice(shturclass.Shturclass.byemsg)
     await ctx.send(f'{randbye}, {ctx.author.mention}!')
+
+
+@client.command(aliases=['wq'])
+async def watchque(ctx, runprgm):
+    randhello = random.choice(shturclass.Shturclass.hellomsg)
+    runprgm = runprgm.lower()
+    if runprgm == 'disable':
+        activity = discord.Activity(name="for commands", type=discord.ActivityType.watching)
+        await client.change_presence(activity=activity)
+        await ctx.send(f'{randhello} {ctx.author.mention}!, I\'ll no longer monitor the mod queues.')
+        quewatcher = False
+        return
+    if runprgm == 'enable':
+        await ctx.send(f'{randhello} {ctx.author.mention}!, I\'ll monitor the mod queues.')
+        quewatcher = True
+        guild = client.get_guild(340973813238071298)  # Reddit Mod server guild
+        mqchannel = client.get_channel(475755886825177098)  # Reddit Chat Channel
+        modmention = guild.get_role(386999610117324800)  # Moderator Role ID
+        mqcd = 0
+        umcd = 0
+        while quewatcher:
+            nettest = False  # Checking for network connectivity
+            while not nettest:
+                try:
+                    mqcounter = 0
+                    umcounter = 0
+                    subreddit = await redditauth.subreddit(subredditname)  # Set our subreddit
+                    modmail = await subreddit.modmail.unread_count()
+                    async for item in subreddit.mod.modqueue(limit=None):  # Build our Mod Queue #s
+                        mqcounter += 1
+                    async for item in subreddit.mod.unmoderated(limit=None):  # Build our Unmoderated #s
+                        umcounter += 1
+                    mmcounter = modmail["new"]
+                    discordactivity = f"R:{mqcounter} Q:{umcounter} M:{mmcounter}"  # Update Discord status
+                    activity = discord.Activity(name=discordactivity, type=discord.ActivityType.watching)
+                    if mqcounter >= 35 and mqcd == 0:
+                        await mqchannel.send(f"\n{modmention.mention}, the MQ is over 35!")
+                        mqcd = 1
+                    if umcounter >= 35 and umcd == 0:
+                        await mqchannel.send(f"\n{modmention.mention}, the UM is over 35!")
+                        umcd = 1
+                    await client.change_presence(activity=activity)
+                    if (mqcounter <= 3) and (mqcd == 1):
+                        print("Resetting MQ cooldown")
+                        mqcd = 0
+                    if (umcounter <= 3) and (umcd == 1):
+                        print("Resetting UM cooldown")
+                        umcd = 0
+                    await asyncio.sleep(30)
+                    nettest = True
+                except:
+                    print(f'Que watcher || Trying again in 30s')
+                    activity = discord.Activity(name="connection to Reddit", type=discord.ActivityType.watching)
+                    await client.change_presence(activity=activity)
+                    await asyncio.sleep(30)
+
+        await ctx.send(f'{randhello} {ctx.author.mention}! I\'ll {runprgm} watching the mod queues.')
+    else:
+        await ctx.send(f'{randhello} {ctx.author.mention}! Sorry, I didn\'t understand your command')
 
 
 @client.command(aliases=['ms'])
@@ -103,7 +123,7 @@ async def media_spam(ctx, runprgm, ignoremod='', action=''):
             print("Creating R5 object")
             msstart = media_spam.MediaSpam(runprgm, ignoremod, action)  # Create the mediaspam object to do stuff with
             print("Creating the R5 task")
-            medialoop = asyncio.create_task(msstart.run())  # Have to do the create_task, otherwise we can't cancel it later
+            medialoop = asyncio.create_task(msstart.run())  # Have to do the create_task, otherwise can't cancel later
             print("Starting the R5 loop!")
             await medialoop
     else:
@@ -126,8 +146,8 @@ async def info(ctx, target: Optional[Member]):
     fields = [("ID", target.id, False),
               ("Name", str(target), True),
               ("Created at", target.created_at.strftime("%Y-%m-%d %H:%M:%S"), True)]
-#              ("Joined at", target.joined_at.strftime("%Y%m%d %H:%M:%S"), True),
-#              ("Roles", target.roles, True)]
+    #              ("Joined at", target.joined_at.strftime("%Y%m%d %H:%M:%S"), True),
+    #              ("Roles", target.roles, True)]
     for name, value, inline in fields:
         embed.add_field(name=name, value=value, inline=inline)
     embed.set_thumbnail(url=target.avatar_url)
@@ -143,7 +163,8 @@ async def commands(ctx):
                               "Switches: Rule# - `1-8`\n"
                               "URL - `Any valid post URL`\n"
                               "Syntax: `!remove Rule# URL`\n "
-                              "Example: `!remove 8 https://old.reddit.com/r/EscapefromTarkov/comments/o5u5mn/event_overview_megathread/`", False),
+                              "Example: `!remove 8 https://old.reddit.com/r/EscapefromTarkov/comments/o5u5mn/event_overview_megathread/`",
+               False),
               ("media_spam", "Aliases: `ms`.\n"
                              "Description: This will enable or disable checking posts for Rule 5 violations (48hrs)\n"
                              "Switches: runprogram - `enable/disable`\n"
@@ -151,6 +172,11 @@ async def commands(ctx):
                              "action - `report/remove` \n"
                              "Syntax: `!ms (enbale/disable) (true/false) (report/remove)`\n "
                              "Example: `!ms enable true report`", False),
+              ("watchqueue", "Aliases: `wq`.\n"
+                             "Description: This will enable or disable watching the moderator queues and sending alerts.\n"
+                             "Switches: runprogram - `enable/disable`\n"
+                             "Syntax: `!wq (enbale/disable)`\n "
+                             "Example: `!wq enable`", False),
               ("turnoff", "Aliases: `turnoff`, `shutdown`\n "
                           "Description: This will stop ShturmanBOT from running, only use in case he's being naughty.  Currently broken due to server permissions.\n"
                           "Syntax: `!shutdown`", False),
@@ -169,7 +195,8 @@ async def commands(ctx):
 @client.command(aliases=[''])
 async def analyze(ctx, username):
     randhello = random.choice(shturclass.Shturclass.hellomsg)
-    await ctx.send(f'{randhello}, {ctx.author.mention}, checking out {username} and their activity on the subreddit, give me a sec...')
+    await ctx.send(
+        f'{randhello}, {ctx.author.mention}, checking out {username} and their activity on the subreddit, give me a sec...')
     redditor = await reddit_login.reddit_auth().redditor(str(username))
     async for userposts in redditor.submissions.new(limit=20):
         print(userposts)
@@ -202,7 +229,8 @@ async def backup_eft(ctx, images='false'):
             ilink = image['link']
             print(f'Name: {iname}, URL: {iurl}, Link: {ilink}')  # Debugging
             dlimage = requests.get(iurl)  # Utilize requests to download the image
-            with open(f"F:\\EscapeFromTarkov\\Backups\\CSS\\{nowdate}-CSS-Images\\{iname}.jpg", "wb") as f:  # Open a .jpg image file
+            with open(f"F:\\EscapeFromTarkov\\Backups\\CSS\\{nowdate}-CSS-Images\\{iname}.jpg",
+                      "wb") as f:  # Open a .jpg image file
                 f.write(dlimage.content)  # Write the contents of the image to the file we just opened
     elif images == 'false':
         pass
@@ -234,7 +262,8 @@ async def remove_post(ctx, reason, url):
                    7: {'id': '1781qym93tnhx', 'name': 'Rule 7:Cheating, Exploits, and Piracy'},
                    8: {'id': '1781r1cyetwki', 'name': 'Rule 8:Reposts'}}
 
-    msg = await ctx.message.channel.send(f"Are you sure you want to remove {url} for `{removaldict[reason]['name']}`? React with :+1:")
+    msg = await ctx.message.channel.send(
+        f"Are you sure you want to remove {url} for `{removaldict[reason]['name']}`? React with :+1:")
 
     def check(react, user):
         return react.message.author == msg.author and ctx.message.channel == react.message.channel and react.emoji == '👍'
@@ -286,8 +315,10 @@ async def argerror(ctx, error):
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, CommandNotFound):
-        await ctx.send(f'{ctx.author.mention}, what command are you trying to run? I may not have that implemented yet.')
+        await ctx.send(
+            f'{ctx.author.mention}, what command are you trying to run? I may not have that implemented yet.')
     else:
         raise error
+
 
 client.run(config['DISCORD']['token'])

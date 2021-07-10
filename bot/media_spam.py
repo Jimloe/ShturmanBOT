@@ -80,7 +80,3 @@ class MediaSpam(shturclass.Shturclass):
                                 print(f'"{userhistory.title}" is not a media link or within the sub.')
                     except:
                         print("User possibly shadowbanned, do some better error handling")
-
-
-    def speak(self):
-        print(self.runprgm, self.action, self.interval, self.subreddit)
