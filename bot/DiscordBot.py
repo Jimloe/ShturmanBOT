@@ -130,6 +130,39 @@ async def media_spam(ctx, runprgm, ignoremod='', action=''):
         await ctx.send(f'{randhello} {ctx.author.mention}! Sorry, I didn\'t understand your command')
 
 
+@client.command(aliases=['dt'])
+async def devtracker(ctx, runprgm):
+    randhello = random.choice(shturclass.Shturclass.hellomsg)
+    runprgm = runprgm.lower()
+    if runprgm == 'disable':
+        await ctx.send(f'{randhello} {ctx.author.mention}!, I\'m no longer watching for Dev activity on the subreddit.')
+        medialoop.cancel()
+        return
+    if runprgm == 'enable':
+        await ctx.send(f'{randhello} {ctx.author.mention}!, I\'ll start watching for Dev activity on the subreddit.')
+        devs = ['trainfender', 'BSG_Cyver']
+
+        async def author_checker(who, link):
+            if who in devs:
+                print("Found a match: https://www.reddit.com", link)
+                devannounce = client.get_channel(668573847062315074)  # official-announcements channel
+                await devannounce.send(f"\n {who} posted: https://www.reddit.com{link}")
+
+        async def handle_posts(subreddit):
+            async for submission in subreddit.stream.submissions(skip_existing=True):
+                await author_checker(submission.author, submission.permalink)
+
+        async def handle_comments(subreddit):
+            async for comment in subreddit.stream.comments(skip_existing=True):
+                await author_checker(comment.author, comment.permalink)
+
+        async def run():
+            subreddit = await redditauth.subreddit("EscapefromTarkov")
+            things = await asyncio.gather(handle_posts(subreddit), handle_comments(subreddit))
+            return things
+        await run()
+
+
 @client.command(aliases=['shutdown'])
 async def turnoff(ctx):
     randhello = random.choice(shturclass.Shturclass.hellomsg)
@@ -177,6 +210,11 @@ async def commands(ctx):
                              "Switches: runprogram - `enable/disable`\n"
                              "Syntax: `!wq (enbale/disable)`\n "
                              "Example: `!wq enable`", False),
+              ("devtracker", "Aliases: `dt`.\n"
+                             "Description: This will enable or disable watching for dev activity on the sub.\n"
+                             "Switches: runprogram - `enable/disable`\n"
+                             "Syntax: `!dt (enbale/disable)`\n "
+                             "Example: `!dt enable`", False),
               ("turnoff", "Aliases: `turnoff`, `shutdown`\n "
                           "Description: This will stop ShturmanBOT from running, only use in case he's being naughty.  Currently broken due to server permissions.\n"
                           "Syntax: `!shutdown`", False),
