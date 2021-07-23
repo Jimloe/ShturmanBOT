@@ -43,9 +43,14 @@ async def bye(ctx):
 
 
 @client.command(aliases=['wq'])
-async def watchque(ctx, runprgm):
+async def watchque(ctx, runprgm, notify="notify", counter=35):
     randhello = random.choice(shturclass.Shturclass.hellomsg)
     runprgm = runprgm.lower()
+    guild = client.get_guild(340973813238071298)  # Reddit Mod server guild
+    mqchannel = client.get_channel(475755886825177098)  # Reddit Chat Channel
+    modmention = guild.get_role(386999610117324800)  # Moderator Role ID
+    mqcd = 0
+    umcd = 0
     if runprgm == 'disable':
         activity = discord.Activity(name="for commands", type=discord.ActivityType.watching)
         await client.change_presence(activity=activity)
@@ -53,13 +58,14 @@ async def watchque(ctx, runprgm):
         quewatcher = False
         return
     if runprgm == 'enable':
-        await ctx.send(f'{randhello} {ctx.author.mention}!, I\'ll monitor the mod queues.')
+        if notify.lower() == "notify":
+            await ctx.send(f'{randhello} {ctx.author.mention}!, I\'ll monitor the mod queues, and notify when the queue hits {counter}')
+        elif notify.lower() == "false":
+            await ctx.send(f'{randhello} {ctx.author.mention}!, I\'ll monitor the mod queues, and won\'t send notifications.')
+        else:
+            await ctx.send(f'{randhello} {ctx.author.mention}!, I didn\'t understand your syntax.')
+            return
         quewatcher = True
-        guild = client.get_guild(340973813238071298)  # Reddit Mod server guild
-        mqchannel = client.get_channel(475755886825177098)  # Reddit Chat Channel
-        modmention = guild.get_role(386999610117324800)  # Moderator Role ID
-        mqcd = 0
-        umcd = 0
         while quewatcher:
             nettest = False  # Checking for network connectivity
             while not nettest:
@@ -75,19 +81,20 @@ async def watchque(ctx, runprgm):
                     mmcounter = modmail["new"]
                     discordactivity = f"R:{mqcounter} Q:{umcounter} M:{mmcounter}"  # Update Discord status
                     activity = discord.Activity(name=discordactivity, type=discord.ActivityType.watching)
-                    if mqcounter >= 35 and mqcd == 0:
-                        await mqchannel.send(f"\n{modmention.mention}, the MQ is over 35!")
-                        mqcd = 1
-                    if umcounter >= 35 and umcd == 0:
-                        await mqchannel.send(f"\n{modmention.mention}, the UM is over 35!")
-                        umcd = 1
                     await client.change_presence(activity=activity)
-                    if (mqcounter <= 3) and (mqcd == 1):
-                        print("Resetting MQ cooldown")
-                        mqcd = 0
-                    if (umcounter <= 3) and (umcd == 1):
-                        print("Resetting UM cooldown")
-                        umcd = 0
+                    if notify.lower() == 'notify':
+                        if mqcounter >= counter and mqcd == 0:
+                            await mqchannel.send(f"\n{modmention.mention}, the MQ is over 35!")
+                            mqcd = 1
+                        if umcounter >= counter and umcd == 0:
+                            await mqchannel.send(f"\n{modmention.mention}, the UM is over 35!")
+                            umcd = 1
+                        if (mqcounter <= 3) and (mqcd == 1):
+                            print("Resetting MQ cooldown")
+                            mqcd = 0
+                        if (umcounter <= 3) and (umcd == 1):
+                            print("Resetting UM cooldown")
+                            umcd = 0
                     await asyncio.sleep(30)
                     nettest = True
                 except:
@@ -158,8 +165,13 @@ async def devtracker(ctx, runprgm):
 
         async def run():
             subreddit = await redditauth.subreddit("EscapefromTarkov")
-            things = await asyncio.gather(handle_posts(subreddit), handle_comments(subreddit))
-            return things
+            while True:
+                try:  # Setting up try for loss of network connectivity
+                    things = await asyncio.gather(handle_posts(subreddit), handle_comments(subreddit))
+                    return things
+                except:
+                    print("Lost of network connectivity, trying again in 30s")
+                    await asyncio.sleep(30)
         await run()
 
 
@@ -207,9 +219,10 @@ async def commands(ctx):
                              "Example: `!ms enable true report`", False),
               ("watchqueue", "Aliases: `wq`.\n"
                              "Description: This will enable or disable watching the moderator queues and sending alerts.\n"
-                             "Switches: runprogram - `enable/disable`\n"
+                             "Switches: runprogram - `enable/disable` `notify` `count #`\n"
                              "Syntax: `!wq (enbale/disable)`\n "
-                             "Example: `!wq enable`", False),
+                             "Example: `!wq enable false` - Will watch the que but not send messages\n "
+                             "`!wq enable notify 50` - Will watch the queue and send notifications at 50.", False),
               ("devtracker", "Aliases: `dt`.\n"
                              "Description: This will enable or disable watching for dev activity on the sub.\n"
                              "Switches: runprogram - `enable/disable`\n"
