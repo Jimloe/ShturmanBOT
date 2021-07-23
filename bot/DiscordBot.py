@@ -372,4 +372,4 @@ async def on_command_error(ctx, error):
         raise error
 
 
-client.run(config['DISCORD']['token'])
+client.run(config['DISCORD']['token'])  # Run the discord bot
