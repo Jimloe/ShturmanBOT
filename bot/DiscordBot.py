@@ -99,8 +99,12 @@ async def watchque(ctx, runprgm, notify="notify", counter=35):
                     nettest = True
                 except:
                     print(f'Que watcher || Trying again in 30s')
-                    activity = discord.Activity(name="connection to Reddit", type=discord.ActivityType.watching)
-                    await client.change_presence(activity=activity)
+                    try:
+                        print('Loss of connectivity to discord, sleeping for 30s and trying again')
+                        activity = discord.Activity(name="connection to Reddit", type=discord.ActivityType.watching)
+                        await client.change_presence(activity=activity)
+                    except:
+                        await asyncio.sleep(30)
                     await asyncio.sleep(30)
 
         await ctx.send(f'{randhello} {ctx.author.mention}! I\'ll {runprgm} watching the mod queues.')
