@@ -247,18 +247,6 @@ async def commands(ctx):
     await ctx.send(embed=embed)
 
 
-@client.command(aliases=[''])
-async def analyze(ctx, username):
-    randhello = random.choice(shturclass.Shturclass.hellomsg)
-    await ctx.send(
-        f'{randhello}, {ctx.author.mention}, checking out {username} and their activity on the subreddit, give me a sec...')
-    redditor = await reddit_login.reddit_auth().redditor(str(username))
-    async for userposts in redditor.submissions.new(limit=20):
-        print(userposts)
-    async for usercomments in redditor.comments.new(limit=50):
-        print(usercomments)
-
-
 @client.command(aliases=['bu', 'backup'])
 async def backup_eft(ctx, images='false'):
     images = images.lower()
@@ -318,13 +306,15 @@ async def remove_post(ctx, reason, url):
                    8: {'id': '1781r1cyetwki', 'name': 'Rule 8:Reposts'}}
 
     msg = await ctx.message.channel.send(
-        f"Are you sure you want to remove {url} for `{removaldict[reason]['name']}`? React with :+1:")
+        f"Are you sure you want to remove {url} for `{removaldict[reason]['name']}`? React with :+1:.  This action will"
+        f" be cancelled after 10s.")
+    await msg.add_reaction(emoji="👍")
 
     def check(react, user):
         return react.message.author == msg.author and ctx.message.channel == react.message.channel and react.emoji == '👍'
 
     try:
-        react = await client.wait_for('reaction_add', timeout=20, check=check)
+        react = await client.wait_for('reaction_add', timeout=10, check=check)
     except asyncio.TimeoutError:
         await msg.delete()
         await ctx.send('You\'re just to damn slow.')
