@@ -131,11 +131,10 @@ dmypy.json
 # Credential files
 ShturmanBOTcreds.json
 config
+configtest
+ShturmanBOTv2
+ShturmanBOTv2.pub
 
 # Testing files
-testinit.py
-DiscordTestEnv.py
-OAuth.py
-ToDO/
-teststream.py
+ShturmanBOTTest.py
 /tester.py
