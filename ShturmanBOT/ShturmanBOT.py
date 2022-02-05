@@ -5,9 +5,11 @@ import os
 import datetime
 import random
 import shturclass
-import reddit_login
+from ShturmanBOT.ShturmanBOT import reddit_helper
 import disnake
 from disnake.ext import commands
+
+# Invite URL: https://discord.com/api/oauth2/authorize?client_id=721249120190332999&permissions=328565075008&scope=bot%20applications.commands
 
 # Loads up the configparser to read our login file
 config = configparser.ConfigParser()
@@ -22,7 +24,7 @@ eftsub = shturclass.Shturclass.subreddit
 # Setup allowed mentions by Discord bot
 disnake.AllowedMentions(everyone=True, users=True, roles=True, replied_user=True)
 
-guilds = [340973813238071298]  # EFT Discord Server
+guilds = config['DISCORD']['guilds']
 
 
 def embeder(description):  # Function to allow us to easily build embeded messages with a default look.
@@ -54,11 +56,11 @@ async def on_ready():
 @bot.slash_command(guild_ids=guilds)
 async def watch_queue(inter, runprgm, notify):
     counter = 35
-    modguild = bot.get_guild(340973813238071298)  # EFT Discord server
-    # chan_alerts = bot.get_channel(668573847062315074)  # EFT Announcements
-    chan_alerts = bot.get_channel(923836328137875486)  # EFT Probo chat channel
-    modmention = modguild.get_role(386999610117324800)  # EFT Moderator Role
-    modmentionprob = modguild.get_role(386999654694256651)  # EFT Probo Role
+    modguild = bot.get_guild(int(config['DISCORD']['eftserver']))  # EFT Discord server
+    # chan_alerts = bot.get_channel(int(config['DISCORD']['eftannounce'])  # EFT Announcements
+    chan_alerts = bot.get_channel(int(config['DISCORD']['probochan']))  # EFT Probo chat channel
+    modmention = modguild.get_role(int(config['DISCORD']['modrole']))  # EFT Moderator Role
+    modmentionprob = modguild.get_role(int(config['DISCORD']['proborole']))  # EFT Probo Role
     randhello = random.choice(shturclass.Shturclass.hellomsg)
     runprgm = runprgm.lower()
     mqchannel = chan_alerts
@@ -211,7 +213,7 @@ async def rule5_enforcer(inter, action):
     subredditstring = f'r/EscapefromTarkov'
     subreddit = 'EscapefromTarkov'
     urlmatch = ["youtube.com", "twitch.tv", "youtu.be"]
-    subredditr5 = await reddit_login.reddit_auth().subreddit(subreddit)
+    subredditr5 = await reddit_helper.reddit_auth().subreddit(subreddit)
     async for submission in subredditr5.stream.submissions():
         print(f'{submission.title} was submitted')
         for url in urlmatch:  # Loop through youtube & twitch to see if we've got youtube/twitch submissions
@@ -226,7 +228,7 @@ async def rule5_enforcer(inter, action):
                     timecutoff = oppostime - delta
                     # Create a user object and check their post history
                     print(f'Checking the history of {subauthor}')
-                    redditor = await reddit_login.reddit_auth().redditor(str(subauthor))
+                    redditor = await reddit_helper.reddit_auth().redditor(str(subauthor))
                     async for userhistory in redditor.submissions.new(limit=10):
                         # for userhistory in reddit_login.redditor(str(subauthor)).submissions.new(limit=10): Old - Remove
                         # Checks to see if a submission has been removed, if so we want to ignore it

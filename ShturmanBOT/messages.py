@@ -1,6 +1,5 @@
 
 class Shturclass:
-    mods = {'Jimlo#4389'}
     hellomsg = ['Привет', 'Hello', 'Здорово', 'Hey', 'What\'s up', 'Yo', 'Дороу', 'Здравствуй']
     saymsg = ['How are you today?', 'Pretty shit raids today, eh?', 'Have you seen my Red Rebel anywhere?',
               'Some PMC just stole my key!', 'Jaeger just put a bounty on my head, I\'ll pay you double',

@@ -130,7 +130,7 @@ dmypy.json
 
 # Credential files
 ShturmanBOTcreds.json
-config
+ShturmanBOT/config
 configtest
 ShturmanBOTv2
 ShturmanBOTv2.pub
@@ -138,3 +138,8 @@ ShturmanBOTv2.pub
 # Testing files
 ShturmanBOTTest.py
 /tester.py
+/test.py
+/ShturmanBOT/ShturmanBOT.py  # This is for reference, uncomment later.
+/ShturmanBOT/watchque.py
+/ShturmanBOT/testing.py
+/ShturmanBOT/testclass.py
