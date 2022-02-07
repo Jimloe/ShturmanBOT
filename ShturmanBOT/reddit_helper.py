@@ -8,10 +8,14 @@ import random
 import requests
 import os
 import re
+import logging
 
 # Loads up the configparser to read our login file
 config = configparser.ConfigParser()
 config.read('config')
+
+# Logging configuration
+logging.basicConfig(format='%(levelname)s-%(asctime)s-%(message)s', level=logging.DEBUG, datefmt='%Y%m%d:%H:%M:%S')
 
 
 class ShturReddit:
@@ -96,7 +100,7 @@ class ShturReddit:
                     iurl = image['url']
                     iname = image['name']
                     ilink = image['link']
-                    print(f'Name: {iname}, URL: {iurl}, Link: {ilink}')  # Debugging
+                    logging.DEBUG(f'Name: {iname}, URL: {iurl}, Link: {ilink}')
                     dlimage = requests.get(iurl)  # Utilize requests to download the image
                     with open(f"F:\\EscapeFromTarkov\\Backups\\CSS\\{nowdate}-CSS-Images\\{iname}.jpg",
                               "wb") as f:  # Open a .jpg image file
@@ -114,7 +118,7 @@ class ShturReddit:
 
         async def author_checker(who, link):  # Function for checking posts/comments against our list of devs.
             if who in devs:
-                print(f"Found a match: {who} posted: https://www.reddit.com{link}")
+                logging.info(f"Found a match: {who} posted: https://www.reddit.com{link}")
                 # Announce a find to Discord
                 await chanannounce.send(f"\n {who} posted: https://www.reddit.com{link}")
 
@@ -144,11 +148,11 @@ class ShturReddit:
         reddit = ShturReddit.reddit_auth()
         subredditr5 = await reddit.subreddit(ShturReddit.subreddit)
         async for submission in subredditr5.stream.submissions():
-            # print(f'{submission.title} was submitted')
+            logging.info(f'{submission.title} was submitted')
             for url in urlmatch:  # Loop through youtube & twitch to see if we've got youtube/twitch submissions
                 if url in submission.url:  # Finds a match
                     caughtpost = submission.permalink  # Store post in a variable so we can make sure we're not catching it later.
-                    print(f'Found a youtube/twitch link: {submission.title}')
+                    logging.info(f'Found a youtube/twitch link: {submission.title}')
                     try:  # Setting up try for 404
                         subauthor = submission.author  # Grabs the author.  We want to check their history.
                         # Grabs the time of the post.
@@ -156,7 +160,7 @@ class ShturReddit:
                         delta = datetime.timedelta(days=2)
                         timecutoff = oppostime - delta
                         # Create a user object and check their post history
-                        print(f'Checking the history of {subauthor}')
+                        logging.info(f'Checking the history of {subauthor}')
                         redditor = await reddit.redditor(str(subauthor))
                         async for userhistory in redditor.submissions.new(limit=10):
                             # for userhistory in reddit_login.redditor(str(subauthor)).submissions.new(limit=10): Old - Remove
@@ -168,22 +172,22 @@ class ShturReddit:
                                 pass  # The post has not been removed, so we want to move on to the rest of the script
                             # Checks post time to make sure we're not going too far back and doing excess checking.
                             historyposttime = datetime.datetime.fromtimestamp(userhistory.created_utc)
-                            print(f'Checking post:"{userhistory.title}"')
-                            print(f'Is post time: {historyposttime} between the cutoff: {timecutoff} and now?')
+                            logging.info(f'Checking post:"{userhistory.title}"')
+                            logging.info(f'Is post time: {historyposttime} between the cutoff: {timecutoff} and now?')
                             if datetime.datetime.fromtimestamp(userhistory.created_utc) < timecutoff:
-                                print(f'Outside our time window, stopping.')
+                                logging.info(f'Outside our time window, stopping.')
                                 break
                             # Checks to see if submissions are in our subreddit
                             # If they are, make sure the domain matches twitch or youtube
                             if str(userhistory.subreddit_name_prefixed) == str(subredditstring) and userhistory.domain in urlmatch:
-                                print(f'Found a potential match in the {ShturReddit.subreddit}, checking if it is the OP')
+                                logging.info(f'Found a potential match in the {ShturReddit.subreddit}, checking if it is the OP')
                                 # We want to make sure we're not matching against the original submission.
                                 if userhistory.permalink != caughtpost:
-                                    print(f'We found a match: "{userhistory.title}"')
+                                    logging.info(f'We found a match: "{userhistory.title}"')
                                     #  Do things like report the post
                                     if action == 'remove':  # Checks to see if we want to remove the post
                                         randhello = ShturReddit.random_hello()
-                                        print('Found one, going to remove the post and leave a message.\n\n\n')
+                                        logging.info('Found one, going to remove the post and leave a message.\n\n\n')
                                         greeting = "{0} {1}! \n\n".format(randhello, submission.author)
                                         footermsg = "***\n\n*I am a bot, and this post was generated automatically. If you believe this was done in error, please contact the " \
                                                     "[mod team](https://www\.reddit\.com/message/compose?to=%2Fr%2FEscapefromTarkov&subject=ShturmanBOT " \
@@ -194,15 +198,15 @@ class ShturReddit:
                                         await submission.mod.send_removal_message(commentremovalmsg,
                                                                                   type='public')  # Send message
                                     else:  # If we don't have post removal set, then we want to report the post.
-                                        print(f'Reporting the post: "{submission.title}"\n\n\n')
+                                        logging.info(f'Reporting the post: "{submission.title}"\n\n\n')
                                         await submission.report(f'R5 violation check!: {userhistory.id}')
                                         break
                                 else:
-                                    print(f'"{userhistory.title}" is the OP, skipping it')
+                                    logging.info(f'"{userhistory.title}" is the OP, skipping it')
                             else:
-                                print(f'"{userhistory.title}" is not a media link or within the sub.')
+                                logging.info(f'"{userhistory.title}" is not a media link or within the sub.')
                     except:
-                        print("User possibly shadowbanned, do some better error handling")
+                        logging.info("User possibly shadowbanned, do some better error handling")
 
     @staticmethod
     async def removal_reasons(url, reason, matcher):

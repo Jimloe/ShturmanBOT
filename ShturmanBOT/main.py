@@ -3,12 +3,16 @@ import configparser
 import datetime
 import disnake
 import re
+import logging
 from reddit_helper import ShturReddit
 from disnake.ext import commands
 # from dropdown import DropdownView
 
 # Invite URL BOT: https://discord.com/api/oauth2/authorize?client_id=721249120190332999&permissions=328565075008&scope=bot%20applications.commands
 # Invite URL TestBOT: https://discord.com/api/oauth2/authorize?client_id=781571125716844614&permissions=397284599872&scope=bot%20applications.commands
+
+# Logging configuration
+logging.basicConfig(format='%(levelname)s-%(asctime)s-%(message)s', level=logging.DEBUG, datefmt='%Y%m%d:%H:%M:%S')
 
 # Loads up the configparser to read our login file
 config = configparser.ConfigParser()
@@ -27,8 +31,8 @@ guilds = [int(i) for i in guilds]  # Convert string list into int list
 
 @bot.event  # Bot has launched and is ready.
 async def on_ready():
-    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("The bot is ready!")
+    logging.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    logging.info("The bot is ready!")
 
 
 # @bot.event
@@ -39,12 +43,12 @@ async def on_ready():
 
 @bot.event
 async def on_disconnect(dc):
-    print(f'Disconnected from Discord:{dc}')
+    logging.warning(f'Disconnected from Discord:{dc}')
 
 
 @bot.event
 async def on_resumed():
-    print(f'Reconnected to discord!')
+    logging.warning(f'Reconnected to discord!')
 
 
 def embeder(description):  # Function to allow us to easily build embeded messages with a default look.
@@ -91,7 +95,7 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
 
             await inter.send(f'{hello} {inter.author.mention}!, '
                              f'I\'ll monitor the mod queues, and notify when the queue hits {counter}')
-
+            logging.info(f"{inter.author.mention} started watchque module with notifications.")
             while True:
                 mqcounter, umcounter, mmcounter = await ShturReddit.queue_counter()
 
@@ -104,10 +108,9 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
                                             f"R:{mqcounter} Q:{umcounter} M:{mmcounter}")
                     cd += 1
                 if cd == 120:  # There are 120 instances of 30s increments in an hour.
-                    print("Resetting notification counter")
+                    logging.info("Resetting notification counter")
                     cd = 0
                 else:
-                    print("loop:", cd)
                     cd += 1
 
                 await asyncio.sleep(30)
@@ -115,6 +118,7 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
         elif notify.lower() == "false":
             await inter.send(f'{hello} {inter.author.mention}!, '
                              f'I\'ll monitor the mod queues, and won\'t send notifications.')
+            logging.info(f"{inter.author.mention} started watchque module. No notifications.")
             while True:
                 mqcounter, umcounter, mmcounter = await ShturReddit.queue_counter()
                 activity = disnake.Activity(name=f"R:{mqcounter} Q:{umcounter} M:{mmcounter}",
@@ -131,13 +135,15 @@ async def backup_eft(inter, images='false'):
     hello = ShturReddit.random_hello()
 
     await inter.send(f'{hello} {inter.author.mention}!, Backing up the configurations now....')
+    logging.info(f"{inter.author.mention} started a backup job.")
 
     backupjob = await ShturReddit.backup_eft(images=images)
 
     if backupjob:
+        logging.info(f"Backup job has been completed")
         await inter.followup.send(f'{hello} {inter.author.mention}!, Finished backing things up!')
     else:
-        print(backupjob)
+        logging.warning("Backup job encountered an error.")
         await inter.followup.send(f'{hello} {inter.author.mention}!, I encountered an error!')
 
 
@@ -149,6 +155,7 @@ async def dev_tracker(inter):
 
     hello = ShturReddit.random_hello()
 
+    logging.info(f"{inter.author.mention} started the dev tracker module.")
     await inter.send(f'{hello} {inter.author.mention}!, I\'ll watch the sub for Dev posts & comments.')
 
     devtrack = await ShturReddit.devtracker(chanannounce)
@@ -157,6 +164,8 @@ async def dev_tracker(inter):
 @bot.slash_command(guild_ids=guilds, description="Monitors subreddit for R5 violations.")
 async def rule5_enforcer(inter, action='report'):
     hello = ShturReddit.random_hello()
+    
+    logging.info(f"{inter.author.mention} started the Rule 5 enforcer module.")
     await inter.send(f'{hello} {inter.author.mention}!, I\'ll start enforcing Rule 5 on the sub.')
 
     rule5 = await ShturReddit.rule5_enforcer(action=action)
@@ -165,6 +174,8 @@ async def rule5_enforcer(inter, action='report'):
 @bot.slash_command(guild_ids=guilds, description="Removes a post and sends a removal reason.")
 async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'):
     hello = ShturReddit.random_hello()
+
+    logging.info(f"{inter.author.mention} is attempting to remove a post: Rule:{reason}, URL={url}")
 
     # await inter.send(f'{hello} {inter.author.mention}!, I\'ll start enforcing Rule 5 on the sub.')
 
@@ -189,7 +200,7 @@ async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://
         selectmenu.add_option(label=intreason, description=reasontxt)
         options.append(optbuilder)
 
-    print(options)
+    logging.DEBUG(f"Options: {options}")
 
     view = disnake.ui.View()
     view.add_item(MySelect())
