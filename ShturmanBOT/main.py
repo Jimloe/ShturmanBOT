@@ -12,7 +12,7 @@ from disnake.ext import commands
 # Invite URL TestBOT: https://discord.com/api/oauth2/authorize?client_id=781571125716844614&permissions=397284599872&scope=bot%20applications.commands
 
 # Logging configuration
-logging.basicConfig(format='%(levelname)s-%(asctime)s-%(message)s', level=logging.DEBUG, datefmt='%Y%m%d:%H:%M:%S')
+logging.basicConfig(format='%(asctime)s-%(levelname)s-%(message)s', level=logging.DEBUG, datefmt='%Y%m%d:%H:%M:%S')
 
 # Loads up the configparser to read our login file
 config = configparser.ConfigParser()

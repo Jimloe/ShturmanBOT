@@ -15,7 +15,7 @@ config = configparser.ConfigParser()
 config.read('config')
 
 # Logging configuration
-logging.basicConfig(format='%(levelname)s-%(asctime)s-%(message)s', level=logging.DEBUG, datefmt='%Y%m%d:%H:%M:%S')
+logging.basicConfig(format='%(asctime)s-%(levelname)s-%(message)s', level=logging.DEBUG, datefmt='%Y%m%d:%H:%M:%S')
 
 
 class ShturReddit:
