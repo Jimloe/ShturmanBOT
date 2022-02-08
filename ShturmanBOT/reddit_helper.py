@@ -17,7 +17,7 @@ config.read('config')
 # Logging configuration
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
+formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(name)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
 # file_handler = logging.FileHandler('logfile.log')
 # file_handler.setLevel(logging.DEBUG)
 # file_handler.setFormatter(formatter)
@@ -258,7 +258,8 @@ class ShturReddit:
         greeting = f"{ShturReddit.random_hello()} {submission.author}! \n\n"
 
         headermsg = "---\n\nThank you for submitting to r/EscapeFromTarkov. Unfortunately, your post violates " \
-                    "Rule {0}, please make sure to read the rules in the sidebar or on the rules page.\n\n" \
+                    "Rule {0}, please make sure to read the rules in the sidebar or on the " \
+                    "[rules page](https://old.reddit.com/r/EscapefromTarkov/wiki/rules).\n\n" \
                     "**Moderator Notes:**\n\n".format(rrnum)
 
         footermsg = "\n\n*I am a bot, and this post was generated automatically. " \

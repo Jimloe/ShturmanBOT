@@ -1,59 +1,75 @@
 import disnake
+import asyncio
+import logging
+from reddit_helper import ShturReddit
+
+# Logging configuration
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(name)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
+# file_handler = logging.FileHandler('logfile.log')
+# file_handler.setLevel(logging.DEBUG)
+# file_handler.setFormatter(formatter)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+# logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
 
 
-# Defines a custom Select containing colour options
-# that the user can choose. The callback function
-# of this class is called when the user changes their choice
-class Dropdown(disnake.ui.Select):
-    def __init__(self, optbuilder):
-        self.optbuilder = optbuilder
-        # Dynamically set our select options from *args
-        # *args must be formatted as: 'label="Rule 1", description="Unreleated"'
-        options = []
-        for arg in self.optbuilder:
-            options.append(disnake.SelectOption(arg))
-        print(options)
+class MySelect(disnake.ui.Select):
 
-        # The placeholder is what will be shown when no option is chosen
-        # The min and max values indicate we can only pick one of the three options
-        # The options parameter defines the dropdown options. We defined this above
-        super().__init__(
-            placeholder="Choose a removal reason...",
-            min_values=1,
-            max_values=1,
-            options=options,
-        )
+    fulldesc = []
+    url = ""
+    matcher = ""
 
-    async def callback(self, interaction: disnake.MessageInteraction):
-        # Use the interaction object to send a response message containing
-        # the user's favourite colour or choice. The self object refers to the
-        # Select object, and the values attribute gets a list of the user's
-        # selected options. We only want the first one.
-        await interaction.response.send_message(f"Your selected reason is{self.values[0]}")
+    def __init__(self, removals, bot):
+        self.removals = removals
+        self.bot = bot
 
+        opts = []
+        value = 1
+        for i in self.removals:
+            selectopt = str(i['label'])
+            description = str(i['description'])
+            # Truncate description to 100 chars
+            opts.append(disnake.SelectOption(label=selectopt, value=str(value), description=description[:100]))
+            MySelect.fulldesc.append({"label": selectopt, "value": str(value), "description": description})
+            value += 1
 
-class DropdownView(disnake.ui.View):
-    def __init__(self, optbuilder):
-        super().__init__()
-        self.optbuilder = optbuilder
+        logger.debug(f"opts: {opts}")
 
-        # Adds the dropdown to our view object.
-        self.add_item(Dropdown(optbuilder))
+        super().__init__(options=opts)
 
+    async def callback(self, inter: disnake.CommandInteraction):
+        self.view.stop()
+        logger.debug(f"MySelect values: {MySelect.fulldesc}")
+        logger.debug(f"values: {self.values[0]}")
+        reasonnum = int(self.values[0]) - 1  # Subtracting one to line up the Discord selection w/ the python list.
 
-bot = Bot()
+        await inter.send(f'You\'ve selected: "{self.options[reasonnum]}", send it?')
 
+        msg = await inter.original_message()
+        await msg.add_reaction(emoji="👍")
 
-@bot.command()
-async def colour(ctx):
-    """Sends a message with our dropdown containing colours"""
+        def check(reaction, user):
+            logger.debug("Inside check function")
+            return user == inter.author and str(reaction.emoji) == '👍'
+        try:
+            reaction, user = await self.bot.wait_for('reaction_add', timeout=10.0, check=check)
+        except asyncio.TimeoutError:
+            logger.debug("Timed out")
+            await msg.delete()
+            await inter.send('You\'re just to damn slow.')
+        else:
+            await msg.delete()
+            logger.debug(f"Delete post, specific Removal reasons: R{MySelect.fulldesc[reasonnum]['label']}: "
+                         f"{MySelect.fulldesc[reasonnum]['description']}")
 
-    options = ['"label=1", description="a description"']
-    # Create the view containing our dropdown
-    view = DropdownView(options)
-
-    # Sending a message containing our view
-    await ctx.send("Pick your favourite colour:", view=view)
-
-
-bot.run("token")
+            removenotice = await ShturReddit.remove_post(url=MySelect.url,
+                                          matcher=MySelect.matcher,
+                                          rrnum=MySelect.fulldesc[reasonnum]['label'],
+                                          rrmsg=MySelect.fulldesc[reasonnum]['description'])
+            if removenotice:
+                await inter.send(f"{inter.author.name} has removed {MySelect.url} for "
+                                 f"{MySelect.fulldesc[reasonnum]['label']}:"
+                                 f"{MySelect.fulldesc[reasonnum]['description']}")

@@ -4,9 +4,9 @@ import datetime
 import disnake
 import re
 import logging
+from dropdown import MySelect
 from reddit_helper import ShturReddit
 from disnake.ext import commands
-# from dropdown import DropdownView
 
 # Invite URL BOT: https://discord.com/api/oauth2/authorize?client_id=721249120190332999&permissions=328565075008&scope=bot%20applications.commands
 # Invite URL TestBOT: https://discord.com/api/oauth2/authorize?client_id=781571125716844614&permissions=397284599872&scope=bot%20applications.commands
@@ -14,7 +14,7 @@ from disnake.ext import commands
 # Logging configuration
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
+formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(name)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
 # file_handler = logging.FileHandler('logfile.log')
 # file_handler.setLevel(logging.DEBUG)
 # file_handler.setFormatter(formatter)
@@ -210,68 +210,9 @@ async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://
     logger.debug(f"Options: {options}")
 
     view = disnake.ui.View()
-    view.add_item(MySelect(removals=options))
+    view.add_item(MySelect(removals=options, bot=bot))
     MySelect.url = url
     MySelect.matcher = matcher
     await inter.response.send_message(f"Select a removal reason for:{url}", view=view)
-
-
-class MySelect(disnake.ui.Select):
-
-    fulldesc = []
-    url = ""
-    matcher = ""
-
-    def __init__(self, removals):
-        self.removals = removals
-
-        opts = []
-        value = 1
-        for i in self.removals:
-            selectopt = str(i['label'])
-            description = str(i['description'])
-            # Truncate description to 100 chars
-            opts.append(disnake.SelectOption(label=selectopt, value=str(value), description=description[:100]))
-            MySelect.fulldesc.append({"label": selectopt, "value": str(value), "description": description})
-            value += 1
-
-        logger.debug(f"opts: {opts}")
-
-        super().__init__(options=opts)
-
-    async def callback(self, inter: disnake.CommandInteraction):
-        self.view.stop()
-        logger.debug(f"MySelect values: {MySelect.fulldesc}")
-        logger.debug(f"values: {self.values[0]}")
-        reasonnum = int(self.values[0]) - 1  # Subtracting one to line up the Discord selection w/ the python list.
-
-        await inter.send(f'You\'ve selected: "{self.options[reasonnum]}", send it?')
-
-        msg = await inter.original_message()
-        await msg.add_reaction(emoji="👍")
-
-        def check(reaction, user):
-            logger.debug("Inside check function")
-            return user == inter.author and str(reaction.emoji) == '👍'
-        try:
-            reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=check)
-        except asyncio.TimeoutError:
-            logger.debug("Timed out")
-            await msg.delete()
-            await inter.send('You\'re just to damn slow.')
-        else:
-            await msg.delete()
-            logger.debug(f"Delete post, specific Removal reasons: R{MySelect.fulldesc[reasonnum]['label']}: "
-                         f"{MySelect.fulldesc[reasonnum]['description']}")
-
-            removenotice = await ShturReddit.remove_post(url=MySelect.url,
-                                          matcher=MySelect.matcher,
-                                          rrnum=MySelect.fulldesc[reasonnum]['label'],
-                                          rrmsg=MySelect.fulldesc[reasonnum]['description'])
-            if removenotice:
-                await inter.send(f"{inter.author.name} has removed {MySelect.url} for "
-                                 f"{MySelect.fulldesc[reasonnum]['label']}:"
-                                 f"{MySelect.fulldesc[reasonnum]['description']}")
-
 
 bot.run(config['DISCORD']['token'])  # Authenticate to Discord via our local token
