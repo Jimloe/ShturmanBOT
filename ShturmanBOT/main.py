@@ -50,6 +50,12 @@ async def on_ready():
 #     print(f'Ran into an error:{error}')
 #     await inter.send("I didn't understand your command")
 
+@bot.event
+async def on_slash_command_error(inter, error):
+    logger.debug(error)
+    if isinstance(error, commands.MissingRole):
+        await inter.send("You don't have the Moderator role.")
+
 
 @bot.event
 async def on_disconnect(dc):
@@ -93,6 +99,7 @@ async def help_shturman(inter):
 
 
 @bot.slash_command(guild_ids=guilds, description="Shturman will monitor the Mod queue numbers.")
+@commands.has_role("Moderator")
 async def watchque(inter, runprgm='enable', notify='true', counter=35):
     hello = ShturReddit.random_hello()
     modguild = bot.get_guild(int(config['DISCORD']['eftserver']))
@@ -141,6 +148,7 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
 
 
 @bot.slash_command(guild_ids=guilds, description="Backup Sub config locally, images won't by saved by default.")
+@commands.has_role("Moderator")
 async def backup_eft(inter, images='false'):
     hello = ShturReddit.random_hello()
 
@@ -158,6 +166,7 @@ async def backup_eft(inter, images='false'):
 
 
 @bot.slash_command(guild_ids=guilds, description="Monitors subreddit for Dev posts and announces them in Discord.")
+@commands.has_role("Moderator")
 async def dev_tracker(inter):
     # Import and build the channel object for sending messages.
     announce = int(config['DISCORD']['eftannounce'])
@@ -172,6 +181,7 @@ async def dev_tracker(inter):
 
 
 @bot.slash_command(guild_ids=guilds, description="Monitors subreddit for R5 violations.")
+@commands.has_role("Moderator")
 async def rule5_enforcer(inter, action='report'):
     hello = ShturReddit.random_hello()
     
@@ -182,6 +192,7 @@ async def rule5_enforcer(inter, action='report'):
 
 
 @bot.slash_command(guild_ids=guilds, description="Removes a post and sends a removal reason.")
+@commands.has_role("Moderator")
 async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'):
     logger.info(f"{inter.author.name} is attempting to remove a post: Rule:{reason}, URL={url}")
 
