@@ -45,11 +45,6 @@ async def on_ready():
     logger.info("The bot is ready!")
 
 
-# @bot.event
-# async def on_slash_command_error(inter, error):
-#     print(f'Ran into an error:{error}')
-#     await inter.send("I didn't understand your command")
-
 @bot.event
 async def on_slash_command_error(inter, error):
     logger.debug(error)
