@@ -5,6 +5,8 @@ import json
 from urllib.parse import unquote
 import datetime
 import random
+
+import asyncprawcore
 import requests
 import os
 import re
@@ -18,12 +20,12 @@ config.read('config')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(name)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
-# file_handler = logging.FileHandler('logfile.log')
-# file_handler.setLevel(logging.DEBUG)
-# file_handler.setFormatter(formatter)
+file_handler = logging.FileHandler('logfile.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
-# logger.addHandler(file_handler)
+logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
@@ -70,17 +72,17 @@ class ShturReddit:
     async def queue_counter():
         mqcounter = 0
         umcounter = 0
-        mmcounter = 0
+
         reddit = ShturReddit.reddit_auth()
         subreddit = await reddit.subreddit(ShturReddit.subreddit)
 
         modmail = await subreddit.modmail.unread_count()
         # Build our Mod Queue #s
-        async for item in subreddit.mod.modqueue(limit=None):
+        async for _ in subreddit.mod.modqueue(limit=None):
             mqcounter += 1
 
         # Build our Unmoderated #s
-        async for item in subreddit.mod.unmoderated(limit=None):
+        async for _ in subreddit.mod.unmoderated(limit=None):
             umcounter += 1
 
         # Build our modmail message #s
@@ -111,7 +113,7 @@ class ShturReddit:
                     iurl = image['url']
                     iname = image['name']
                     ilink = image['link']
-                    logger.DEBUG(f'Name: {iname}, URL: {iurl}, Link: {ilink}')
+                    logger.debug(f'Name: {iname}, URL: {iurl}, Link: {ilink}')
                     dlimage = requests.get(iurl)  # Utilize requests to download the image
                     with open(f"F:\\EscapeFromTarkov\\Backups\\CSS\\{nowdate}-CSS-Images\\{iname}.jpg",
                               "wb") as f:  # Open a .jpg image file
@@ -164,8 +166,15 @@ class ShturReddit:
                 if url in submission.url:  # Finds a match
                     caughtpost = submission.permalink  # Store post in a variable so we can make sure we're not catching it later.
                     logger.info(f'Found a youtube/twitch link: {submission.title}')
-                    try:  # Setting up try for 404
+                    try:  # Setting up shadowbanned user.
                         subauthor = submission.author  # Grabs the author.  We want to check their history.
+                    except asyncprawcore.Forbidden:
+                        logger.info(f"User shadowbanned:{submission.author}")
+                        return "Shadowbanned user"
+                    except asyncprawcore.NotFound:
+                        logger.info(f"User doesn't exist:{submission.author}")
+                        return "User doesn't exist"
+                    else:
                         # Grabs the time of the post.
                         oppostime = datetime.datetime.fromtimestamp(submission.created_utc)
                         delta = datetime.timedelta(days=2)
@@ -179,7 +188,7 @@ class ShturReddit:
                             try:
                                 if userhistory.removed is True:
                                     continue  # The post has been removed, continue on to next submission
-                            except:
+                            except AttributeError:
                                 pass  # The post has not been removed, so we want to move on to the rest of the script
                             # Checks post time to make sure we're not going too far back and doing excess checking.
                             historyposttime = datetime.datetime.fromtimestamp(userhistory.created_utc)
@@ -202,11 +211,14 @@ class ShturReddit:
                                         randhello = ShturReddit.random_hello()
                                         logger.info('Found one, going to remove the post and leave a message.\n\n\n')
                                         greeting = "{0} {1}! \n\n".format(randhello, submission.author)
-                                        footermsg = "***\n\n*I am a bot, and this post was generated automatically. If you believe this was done in error, please contact the " \
-                                                    "[mod team](https://www\.reddit\.com/message/compose?to=%2Fr%2FEscapefromTarkov&subject=ShturmanBOT " \
-                                                    "error&message=I'm writing to you about the following submission: https://reddit.com{0}. " \
-                                                    "%0D%0D ShturmanBOT has removed my post by mistake)*".format(
-                                            submission.permalink)
+                                        footermsg = (
+                                            "***\n\n*I am a bot, and this post was generated automatically. "
+                                            "If you believe this was done in error, please contact the [mod team]"
+                                            "(https://www\.reddit\.com/message/compose?to=%2Fr%2FEscapefromTarkov&"
+                                            "subject=ShturmanBOT error&message=I'm writing to you about the "
+                                            "following submission: https://reddit.com{0}. %0D%0D ShturmanBOT has "
+                                            "removed my post by mistake)*".format(submission.permalink)
+                                        )
                                         commentremovalmsg = greeting + removalreason + footermsg  # Construct removal message
                                         await submission.mod.remove(mod_note="R5 Violation")  # Remove the post
                                         await submission.mod.send_removal_message(commentremovalmsg,
@@ -219,8 +231,6 @@ class ShturReddit:
                                     logger.info(f'"{userhistory.title}" is the OP, skipping it')
                             else:
                                 logger.info(f'"{userhistory.title}" is not a media link or within the sub.')
-                    except:
-                        logger.info("User possibly shadowbanned, do some better error handling")
 
     @staticmethod
     async def removal_reasons(reason):
@@ -262,14 +272,42 @@ class ShturReddit:
                     "[rules page](https://old.reddit.com/r/EscapefromTarkov/wiki/rules).\n\n" \
                     "**Moderator Notes:**\n\n".format(rrnum)
 
-        footermsg = "\n\n*I am a bot, and this post was generated automatically. " \
-                    "If you believe this was done in error, please contact the [mod team]" \
-                    "(https://www\.reddit\.com/message/compose?to=%2Fr%2FEscapefromTarkov&subject=ShturmanBOT " \
-                    "error&message=I'm writing to you about the following submission: https://reddit.com{0}. " \
-                    "%0D%0D ShturmanBOT has removed my post by mistake)*".format(submission.permalink)
+        footermsg = (
+            "\n\n*I am a bot, and this post was generated automatically. If you believe this was done in error, "
+            "please contact the [mod team](https://www\.reddit\.com/message/compose?to=%2Fr%2FEscapefromTarkov&subject="
+            "ShturmanBOT error&message=I'm writing to you about the following submission: https://reddit.com{0}. "
+            "%0D%0D ShturmanBOT has removed my post by mistake)*".format(submission.permalink)
+        )
 
         commentremovalmsg = greeting + headermsg + rrmsg + footermsg  # Construct removal message
 
         await submission.mod.remove(mod_note=f"R{rrnum} Violation")  # Remove the post
         await submission.mod.send_removal_message(commentremovalmsg, type='public')  # Send message
-        return "Success"
+        return True
+
+    @staticmethod
+    async def get_user(username):
+        reddit = ShturReddit.reddit_auth()
+        redditor = await reddit.redditor(str(username))
+        try:
+            userhistory = []
+            async for history in redditor.submissions.new(limit=6):
+                if history.subreddit_name_prefixed == 'r/EscapefromTarkov':
+                    permalink = history.permalink
+                    date = history.created_utc
+                    removed = history.removed
+                    title = history.title
+                    returndict = {'title': title, 'permalink': permalink, 'date': date, 'removed': removed}
+                    userhistory.append(returndict)
+            return userhistory
+        except asyncprawcore.Forbidden:
+            return "Shadowbanned user"
+        except asyncprawcore.NotFound:
+            return "User doesn't exist"
+
+    @staticmethod
+    async def get_reddit_post(pid):
+        reddit = ShturReddit.reddit_auth()
+        submission = await reddit.submission(id=pid)
+        logger.debug(submission.title)
+        return submission.title, submission.removed_by_category

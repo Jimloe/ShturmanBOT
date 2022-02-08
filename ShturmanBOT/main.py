@@ -4,7 +4,7 @@ import datetime
 import disnake
 import re
 import logging
-from dropdown import MySelect
+from dropdown import SelectUI
 from reddit_helper import ShturReddit
 from disnake.ext import commands
 
@@ -15,12 +15,12 @@ from disnake.ext import commands
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(name)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
-# file_handler = logging.FileHandler('logfile.log')
-# file_handler.setLevel(logging.DEBUG)
-# file_handler.setFormatter(formatter)
+file_handler = logging.FileHandler('logfile.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
-# logger.addHandler(file_handler)
+logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
@@ -53,8 +53,8 @@ async def on_slash_command_error(inter, error):
 
 
 @bot.event
-async def on_disconnect(dc):
-    logger.warning(f'Disconnected from Discord:{dc}')
+async def on_disconnect():
+    logger.warning(f'Disconnected from Discord')
 
 
 @bot.event
@@ -62,9 +62,9 @@ async def on_resumed():
     logger.warning(f'Reconnected to discord!')
 
 
-def embeder(description):  # Function to allow us to easily build embeded messages with a default look.
+def embeder(title, description):  # Function to allow us to easily build embeded messages with a default look.
     embed = disnake.Embed(
-        title="Usable commands",
+        title=title,
         description=description,
         color=disnake.Colour.yellow(),
         timestamp=datetime.datetime.now(),
@@ -85,7 +85,7 @@ def embeder(description):  # Function to allow us to easily build embeded messag
 
 @bot.slash_command(guild_ids=guilds)
 async def help_shturman(inter):
-    embed = embeder("This lists out important commands!")
+    embed = embeder("Useable commands", "This lists out important commands!")
     embed.add_field(name="Regular Title", value="Regular Value", inline=False)
     embed.add_field(name="Inline Title", value="Inline Value", inline=True)
     embed.add_field(name="Inline Title", value="Inline Value", inline=True)
@@ -105,31 +105,38 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
         if notify.lower() == "true":
             cd = 0
 
-            await inter.send(f'{hello} {inter.author.mention}!, '
-                             f'I\'ll monitor the mod queues, and notify when the queue hits {counter}')
+            await inter.send(
+                f'{hello} {inter.author.mention}!, '
+                f'I\'ll monitor the mod queues, and notify when the queue hits {counter}'
+            )
             logger.info(f"{inter.author.name} started watchque module with notifications.")
             while True:
                 mqcounter, umcounter, mmcounter = await ShturReddit.queue_counter()
 
-                activity = disnake.Activity(name=f"R:{mqcounter} Q:{umcounter} M:{mmcounter}",
-                                            type=disnake.ActivityType.watching)
+                activity = disnake.Activity(
+                    name=f"R:{mqcounter} Q:{umcounter} M:{mmcounter}",
+                    type=disnake.ActivityType.watching
+                )
                 await bot.change_presence(activity=activity)
 
                 if (mqcounter >= counter or umcounter >= counter) and cd == 0:
-                    await chanannounce.send(f"\n{modmention.mention}, please check the queues! "
-                                            f"R:{mqcounter} Q:{umcounter} M:{mmcounter}")
+                    await chanannounce.send(
+                        f"\n{modmention.mention}, please check the queues! "
+                        f"R:{mqcounter} Q:{umcounter} M:{mmcounter}"
+                    )
                     cd += 1
                 if cd == 120:  # There are 120 instances of 30s increments in an hour.
                     logger.info("Resetting notification counter")
                     cd = 0
                 else:
                     cd += 1
-
                 await asyncio.sleep(30)
 
         elif notify.lower() == "false":
-            await inter.send(f'{hello} {inter.author.mention}!, '
-                             f'I\'ll monitor the mod queues, and won\'t send notifications.')
+            await inter.send(
+                f'{hello} {inter.author.mention}!, '
+                f'I\'ll monitor the mod queues, and won\'t send notifications.'
+                )
             logger.info(f"{inter.author.name} started watchque module. No notifications.")
             while True:
                 mqcounter, umcounter, mmcounter = await ShturReddit.queue_counter()
@@ -146,10 +153,8 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
 @commands.has_role("Moderator")
 async def backup_eft(inter, images='false'):
     hello = ShturReddit.random_hello()
-
     await inter.send(f'{hello} {inter.author.mention}!, Backing up the configurations now....')
     logger.info(f"{inter.author.name} started a backup job.")
-
     backupjob = await ShturReddit.backup_eft(images=images)
 
     if backupjob:
@@ -166,33 +171,29 @@ async def dev_tracker(inter):
     # Import and build the channel object for sending messages.
     announce = int(config['DISCORD']['eftannounce'])
     chanannounce = bot.get_channel(announce)
-
     hello = ShturReddit.random_hello()
-
     logger.info(f"{inter.author.name} started the dev tracker module.")
     await inter.send(f'{hello} {inter.author.mention}!, I\'ll watch the sub for Dev posts & comments.')
-
-    devtrack = await ShturReddit.devtracker(chanannounce)
+    await ShturReddit.devtracker(chanannounce)
 
 
 @bot.slash_command(guild_ids=guilds, description="Monitors subreddit for R5 violations.")
 @commands.has_role("Moderator")
 async def rule5_enforcer(inter, action='report'):
     hello = ShturReddit.random_hello()
-    
     logger.info(f"{inter.author.name} started the Rule 5 enforcer module.")
     await inter.send(f'{hello} {inter.author.mention}!, I\'ll start enforcing Rule 5 on the sub.')
-
-    rule5 = await ShturReddit.rule5_enforcer(action=action)
+    await ShturReddit.rule5_enforcer(action=action)
 
 
 @bot.slash_command(guild_ids=guilds, description="Removes a post and sends a removal reason.")
 @commands.has_role("Moderator")
-async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'):
+async def remove_post(
+        inter: disnake.CommandInteraction,
+        reason=1,
+        url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'
+        ):
     logger.info(f"{inter.author.name} is attempting to remove a post: Rule:{reason}, URL={url}")
-
-    hello = ShturReddit.random_hello()
-
     matcher = re.match('\w*://\w*.reddit.com/r/EscapefromTarkov/comments/', url)
 
     if not matcher:
@@ -200,7 +201,7 @@ async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://
         return
     try:
         intreason = int(reason)
-    except:
+    except ValueError:
         await inter.response.send_message(f'{inter.author.mention}, the reason you provided isn\'t an integer.')
         return
 
@@ -215,10 +216,41 @@ async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://
 
     logger.debug(f"Options: {options}")
 
-    view = disnake.ui.View()
-    view.add_item(MySelect(removals=options, bot=bot))
-    MySelect.url = url
-    MySelect.matcher = matcher
+    view = disnake.ui.View(timeout=30)
+    view.add_item(SelectUI(removals=options, bot=bot))
+    SelectUI.url = url
+    SelectUI.matcher = matcher
+
     await inter.response.send_message(f"Select a removal reason for:{url}", view=view)
+
+
+@bot.slash_command(guild_ids=guilds, description="Gets a users history.")
+async def get_reddit_user(inter, username):
+    await inter.response.send_message(f"Getting info on {username}...")
+    results = await ShturReddit.get_user(username)
+
+    embed = embeder(username, f"https://www.reddit.com/u/{username}")
+
+    for result in results:
+        timehack = datetime.datetime.fromtimestamp(result['date']).strftime("%Y%m%d:%H:%M:%S")
+        link = f"https://www.reddit.com/{result['permalink']}"
+        if result['removed']:
+            status = 'Removed'
+        else:
+            status = "Active"
+        titlestatus = f"{result['title']}: {status}"
+        embed.add_field(name="Title/Status", value=titlestatus, inline=True)
+        embed.add_field(name="Link", value=link, inline=True)
+        embed.add_field(name="Date", value=timehack, inline=True)
+    await inter.followup.send(embed=embed)
+
+
+@bot.slash_command(guild_ids=guilds, description="Gets a reddit post.")
+@commands.has_role("Moderator")
+async def get_reddit_post(inter, pid='snj2ze'):  # my removed post: siu874
+    await inter.response.send_message(f"Getting the post!")
+    results = await ShturReddit.get_reddit_post(pid)
+    if results:
+        await inter.send(results)
 
 bot.run(config['DISCORD']['token'])  # Authenticate to Discord via our local token
