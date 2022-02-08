@@ -182,12 +182,13 @@ async def rule5_enforcer(inter, action='report'):
 
 
 @bot.slash_command(guild_ids=guilds, description="Removes a post and sends a removal reason.")
-async def remove_post(inter: disnake.CommandInteraction, reason=2, url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'):
+async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'):
     logger.info(f"{inter.author.name} is attempting to remove a post: Rule:{reason}, URL={url}")
 
     hello = ShturReddit.random_hello()
 
     matcher = re.match('\w*://\w*.reddit.com/r/EscapefromTarkov/comments/', url)
+
     if not matcher:
         await inter.response.send_message(f'{inter.author.mention}, you\'ve sent me a fucked up link.')
         return
@@ -197,7 +198,7 @@ async def remove_post(inter: disnake.CommandInteraction, reason=2, url='https://
         await inter.response.send_message(f'{inter.author.mention}, the reason you provided isn\'t an integer.')
         return
 
-    removalreasons = await ShturReddit.removal_reasons(reason=reason, url=url, matcher=matcher)
+    removalreasons = await ShturReddit.removal_reasons(reason=reason)
 
     options = []
 
@@ -210,12 +211,16 @@ async def remove_post(inter: disnake.CommandInteraction, reason=2, url='https://
 
     view = disnake.ui.View()
     view.add_item(MySelect(removals=options))
-    await inter.response.send_message("Select a removal reason:", view=view)
+    MySelect.url = url
+    MySelect.matcher = matcher
+    await inter.response.send_message(f"Select a removal reason for:{url}", view=view)
 
 
 class MySelect(disnake.ui.Select):
 
     fulldesc = []
+    url = ""
+    matcher = ""
 
     def __init__(self, removals):
         self.removals = removals
@@ -238,8 +243,9 @@ class MySelect(disnake.ui.Select):
         self.view.stop()
         logger.debug(f"MySelect values: {MySelect.fulldesc}")
         logger.debug(f"values: {self.values[0]}")
+        reasonnum = int(self.values[0]) - 1  # Subtracting one to line up the Discord selection w/ the python list.
 
-        await inter.send(f'You\'ve selected: "{self.options[0]}", send it?')
+        await inter.send(f'You\'ve selected: "{self.options[reasonnum]}", send it?')
 
         msg = await inter.original_message()
         await msg.add_reaction(emoji="👍")
@@ -255,25 +261,17 @@ class MySelect(disnake.ui.Select):
             await inter.send('You\'re just to damn slow.')
         else:
             await msg.delete()
-            logger.debug("We are deleteing stuff now")
+            logger.debug(f"Delete post, specific Removal reasons: R{MySelect.fulldesc[reasonnum]['label']}: "
+                         f"{MySelect.fulldesc[reasonnum]['description']}")
 
-            # reasonid = str(removaldict[reason]['id'])
-            # subreddit = await redditauth.subreddit("EscapefromTarkov")
-            # remreason = await subreddit.mod.removal_reasons.get_reason(reasonid)
-            # submission = await redditauth.submission(id=urlffinal, lazy=True)
-            # remreasonmsg = str(remreason.message).replace('PLACEHOLDER', urlffinal)
-            # await submission.mod.remove(reason_id=remreason.id)
-            # await submission.mod.send_removal_message(message=remreasonmsg, title=remreason.title)
-            # await ctx.send(f"Sent it, {ctx.author.mention}.  That post is no more.")
-            # await msg.delete()
-
-
-# IN COG:
-@bot.slash_command(guild_ids=guilds)
-async def select_test(self, inter: disnake.CommandInteraction):
-    view = disnake.ui.View()
-    view.add_item(MySelect())
-    await inter.response.send_message("ORIGINAL", view=view)
+            removenotice = await ShturReddit.remove_post(url=MySelect.url,
+                                          matcher=MySelect.matcher,
+                                          rrnum=MySelect.fulldesc[reasonnum]['label'],
+                                          rrmsg=MySelect.fulldesc[reasonnum]['description'])
+            if removenotice:
+                await inter.send(f"{inter.author.name} has removed {MySelect.url} for "
+                                 f"{MySelect.fulldesc[reasonnum]['label']}:"
+                                 f"{MySelect.fulldesc[reasonnum]['description']}")
 
 
 bot.run(config['DISCORD']['token'])  # Authenticate to Discord via our local token

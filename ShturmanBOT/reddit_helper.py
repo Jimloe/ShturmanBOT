@@ -28,7 +28,6 @@ logger.addHandler(stream_handler)
 
 
 class ShturReddit:
-
     hellomsg = ['Привет', 'Hello', 'Здорово', 'Hey', 'What\'s up', 'Yo', 'Дороу', 'Здравствуй']
     saymsg = ['How are you today?', 'Pretty shit raids today, eh?', 'Have you seen my Red Rebel anywhere?',
               'Some PMC just stole my key!', 'Jaeger just put a bounty on my head, I\'ll pay you double',
@@ -49,10 +48,10 @@ class ShturReddit:
     def reddit_auth():
         # Sets up the login for Reddit by reading our config file
         login = asyncpraw.Reddit(username=config['LOGIN']['username'],
-                             password=config['LOGIN']['password'],
-                             client_id=config['LOGIN']['client_id'],
-                             client_secret=config['LOGIN']['client_secret'],
-                             user_agent=config['LOGIN']['user_agent'])
+                                 password=config['LOGIN']['password'],
+                                 client_id=config['LOGIN']['client_id'],
+                                 client_secret=config['LOGIN']['client_secret'],
+                                 user_agent=config['LOGIN']['user_agent'])
         return login
 
     @staticmethod
@@ -154,7 +153,7 @@ class ShturReddit:
     @staticmethod
     async def rule5_enforcer(action):
         removalreason = "Limit posting of linked content to once every 48 hours. Rule 5 applies  " \
-                             "to whether or not you made the content you’re submitting. \n\n"
+                        "to whether or not you made the content you’re submitting. \n\n"
         urlmatch = ["youtube.com", "twitch.tv", "youtu.be"]
         subredditstring = 'r/EscapefromTarkov'
         reddit = ShturReddit.reddit_auth()
@@ -191,8 +190,10 @@ class ShturReddit:
                                 break
                             # Checks to see if submissions are in our subreddit
                             # If they are, make sure the domain matches twitch or youtube
-                            if str(userhistory.subreddit_name_prefixed) == str(subredditstring) and userhistory.domain in urlmatch:
-                                logger.info(f'Found a potential match in the {ShturReddit.subreddit}, checking if it is the OP')
+                            if str(userhistory.subreddit_name_prefixed) == str(
+                                    subredditstring) and userhistory.domain in urlmatch:
+                                logger.info(
+                                    f'Found a potential match in the {ShturReddit.subreddit}, checking if it is the OP')
                                 # We want to make sure we're not matching against the original submission.
                                 if userhistory.permalink != caughtpost:
                                     logger.info(f'We found a match: "{userhistory.title}"')
@@ -204,7 +205,8 @@ class ShturReddit:
                                         footermsg = "***\n\n*I am a bot, and this post was generated automatically. If you believe this was done in error, please contact the " \
                                                     "[mod team](https://www\.reddit\.com/message/compose?to=%2Fr%2FEscapefromTarkov&subject=ShturmanBOT " \
                                                     "error&message=I'm writing to you about the following submission: https://reddit.com{0}. " \
-                                                    "%0D%0D ShturmanBOT has removed my post by mistake)*".format(submission.permalink)
+                                                    "%0D%0D ShturmanBOT has removed my post by mistake)*".format(
+                                            submission.permalink)
                                         commentremovalmsg = greeting + removalreason + footermsg  # Construct removal message
                                         await submission.mod.remove(mod_note="R5 Violation")  # Remove the post
                                         await submission.mod.send_removal_message(commentremovalmsg,
@@ -221,10 +223,7 @@ class ShturReddit:
                         logger.info("User possibly shadowbanned, do some better error handling")
 
     @staticmethod
-    async def removal_reasons(url, reason, matcher):
-        urlfstep1 = str(url).replace(matcher.group(0), '')
-        matcher = re.match('\w*', urlfstep1)
-        urlffinal = str(matcher.group(0))
+    async def removal_reasons(reason):
         num_rule = reason - 1  # Subtracting 1 due to rule index starting at 0.
 
         reddit = ShturReddit.reddit_auth()
@@ -245,3 +244,31 @@ class ShturReddit:
         removalreasons = re.findall('(?<=<option>).*?(?=</option>)', outputstr)
 
         return removalreasons
+
+    @staticmethod
+    async def remove_post(url, matcher, rrnum, rrmsg):
+        reddit = ShturReddit.reddit_auth()
+
+        urlfstep1 = str(url).replace(matcher.group(0), '')
+        matcher = re.match('\w*', urlfstep1)
+        urlffinal = str(matcher.group(0))
+
+        submission = await reddit.submission(id=urlffinal)
+
+        greeting = f"{ShturReddit.random_hello()} {submission.author}! \n\n"
+
+        headermsg = "---\n\nThank you for submitting to r/EscapeFromTarkov. Unfortunately, your post violates " \
+                    "Rule {0}, please make sure to read the rules in the sidebar or on the rules page.\n\n" \
+                    "**Moderator Notes:**\n\n".format(rrnum)
+
+        footermsg = "\n\n*I am a bot, and this post was generated automatically. " \
+                    "If you believe this was done in error, please contact the [mod team]" \
+                    "(https://www\.reddit\.com/message/compose?to=%2Fr%2FEscapefromTarkov&subject=ShturmanBOT " \
+                    "error&message=I'm writing to you about the following submission: https://reddit.com{0}. " \
+                    "%0D%0D ShturmanBOT has removed my post by mistake)*".format(submission.permalink)
+
+        commentremovalmsg = greeting + headermsg + rrmsg + footermsg  # Construct removal message
+
+        await submission.mod.remove(mod_note=f"R{rrnum} Violation")  # Remove the post
+        await submission.mod.send_removal_message(commentremovalmsg, type='public')  # Send message
+        return "Success"
