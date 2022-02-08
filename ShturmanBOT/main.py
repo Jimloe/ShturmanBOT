@@ -12,7 +12,17 @@ from disnake.ext import commands
 # Invite URL TestBOT: https://discord.com/api/oauth2/authorize?client_id=781571125716844614&permissions=397284599872&scope=bot%20applications.commands
 
 # Logging configuration
-logging.basicConfig(format='%(asctime)s-%(levelname)s-%(message)s', level=logging.DEBUG, datefmt='%Y%m%d:%H:%M:%S')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
+# file_handler = logging.FileHandler('logfile.log')
+# file_handler.setLevel(logging.DEBUG)
+# file_handler.setFormatter(formatter)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+# logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
 
 # Loads up the configparser to read our login file
 config = configparser.ConfigParser()
@@ -31,8 +41,8 @@ guilds = [int(i) for i in guilds]  # Convert string list into int list
 
 @bot.event  # Bot has launched and is ready.
 async def on_ready():
-    logging.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    logging.info("The bot is ready!")
+    logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    logger.info("The bot is ready!")
 
 
 # @bot.event
@@ -43,12 +53,12 @@ async def on_ready():
 
 @bot.event
 async def on_disconnect(dc):
-    logging.warning(f'Disconnected from Discord:{dc}')
+    logger.warning(f'Disconnected from Discord:{dc}')
 
 
 @bot.event
 async def on_resumed():
-    logging.warning(f'Reconnected to discord!')
+    logger.warning(f'Reconnected to discord!')
 
 
 def embeder(description):  # Function to allow us to easily build embeded messages with a default look.
@@ -95,7 +105,7 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
 
             await inter.send(f'{hello} {inter.author.mention}!, '
                              f'I\'ll monitor the mod queues, and notify when the queue hits {counter}')
-            logging.info(f"{inter.author.mention} started watchque module with notifications.")
+            logger.info(f"{inter.author.name} started watchque module with notifications.")
             while True:
                 mqcounter, umcounter, mmcounter = await ShturReddit.queue_counter()
 
@@ -108,7 +118,7 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
                                             f"R:{mqcounter} Q:{umcounter} M:{mmcounter}")
                     cd += 1
                 if cd == 120:  # There are 120 instances of 30s increments in an hour.
-                    logging.info("Resetting notification counter")
+                    logger.info("Resetting notification counter")
                     cd = 0
                 else:
                     cd += 1
@@ -118,7 +128,7 @@ async def watchque(inter, runprgm='enable', notify='true', counter=35):
         elif notify.lower() == "false":
             await inter.send(f'{hello} {inter.author.mention}!, '
                              f'I\'ll monitor the mod queues, and won\'t send notifications.')
-            logging.info(f"{inter.author.mention} started watchque module. No notifications.")
+            logger.info(f"{inter.author.name} started watchque module. No notifications.")
             while True:
                 mqcounter, umcounter, mmcounter = await ShturReddit.queue_counter()
                 activity = disnake.Activity(name=f"R:{mqcounter} Q:{umcounter} M:{mmcounter}",
@@ -135,15 +145,15 @@ async def backup_eft(inter, images='false'):
     hello = ShturReddit.random_hello()
 
     await inter.send(f'{hello} {inter.author.mention}!, Backing up the configurations now....')
-    logging.info(f"{inter.author.mention} started a backup job.")
+    logger.info(f"{inter.author.name} started a backup job.")
 
     backupjob = await ShturReddit.backup_eft(images=images)
 
     if backupjob:
-        logging.info(f"Backup job has been completed")
+        logger.info(f"Backup job has been completed")
         await inter.followup.send(f'{hello} {inter.author.mention}!, Finished backing things up!')
     else:
-        logging.warning("Backup job encountered an error.")
+        logger.warning("Backup job encountered an error.")
         await inter.followup.send(f'{hello} {inter.author.mention}!, I encountered an error!')
 
 
@@ -155,7 +165,7 @@ async def dev_tracker(inter):
 
     hello = ShturReddit.random_hello()
 
-    logging.info(f"{inter.author.mention} started the dev tracker module.")
+    logger.info(f"{inter.author.name} started the dev tracker module.")
     await inter.send(f'{hello} {inter.author.mention}!, I\'ll watch the sub for Dev posts & comments.')
 
     devtrack = await ShturReddit.devtracker(chanannounce)
@@ -165,19 +175,17 @@ async def dev_tracker(inter):
 async def rule5_enforcer(inter, action='report'):
     hello = ShturReddit.random_hello()
     
-    logging.info(f"{inter.author.mention} started the Rule 5 enforcer module.")
+    logger.info(f"{inter.author.name} started the Rule 5 enforcer module.")
     await inter.send(f'{hello} {inter.author.mention}!, I\'ll start enforcing Rule 5 on the sub.')
 
     rule5 = await ShturReddit.rule5_enforcer(action=action)
 
 
 @bot.slash_command(guild_ids=guilds, description="Removes a post and sends a removal reason.")
-async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'):
+async def remove_post(inter: disnake.CommandInteraction, reason=2, url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'):
+    logger.info(f"{inter.author.name} is attempting to remove a post: Rule:{reason}, URL={url}")
+
     hello = ShturReddit.random_hello()
-
-    logging.info(f"{inter.author.mention} is attempting to remove a post: Rule:{reason}, URL={url}")
-
-    # await inter.send(f'{hello} {inter.author.mention}!, I\'ll start enforcing Rule 5 on the sub.')
 
     matcher = re.match('\w*://\w*.reddit.com/r/EscapefromTarkov/comments/', url)
     if not matcher:
@@ -192,39 +200,72 @@ async def remove_post(inter: disnake.CommandInteraction, reason=1, url='https://
     removalreasons = await ShturReddit.removal_reasons(reason=reason, url=url, matcher=matcher)
 
     options = []
-    selectmenu = disnake.ui.Select
 
     for reasontxt in removalreasons:
         reasontxt = reasontxt.strip()  # Strip off leading and trailing spaces
-        optbuilder = f'"label={intreason}", description="{reasontxt}"'
-        selectmenu.add_option(label=intreason, description=reasontxt)
+        optbuilder = {'label': intreason, 'description': reasontxt}
         options.append(optbuilder)
 
-    logging.DEBUG(f"Options: {options}")
+    logger.debug(f"Options: {options}")
 
     view = disnake.ui.View()
-    view.add_item(MySelect())
-    await inter.response.send_message("ORIGINAL", view=view)
-
-    # view = disnake.ui.View
-    # # # Create the view containing our dropdown
-    # # view = DropdownView(options)
-    # #
-    # # # Sending a message containing our view
-    # await inter.send("Pick a removal reason:", view=view)
+    view.add_item(MySelect(removals=options))
+    await inter.response.send_message("Select a removal reason:", view=view)
 
 
 class MySelect(disnake.ui.Select):
 
-    def __init__(self):
-        opts = [
-            disnake.SelectOption(label=s)
-            for s in "abc"
-        ]
+    fulldesc = []
+
+    def __init__(self, removals):
+        self.removals = removals
+
+        opts = []
+        value = 1
+        for i in self.removals:
+            selectopt = str(i['label'])
+            description = str(i['description'])
+            # Truncate description to 100 chars
+            opts.append(disnake.SelectOption(label=selectopt, value=str(value), description=description[:100]))
+            MySelect.fulldesc.append({"label": selectopt, "value": str(value), "description": description})
+            value += 1
+
+        logger.debug(f"opts: {opts}")
+
         super().__init__(options=opts)
 
     async def callback(self, inter: disnake.CommandInteraction):
-        await inter.response.send_message("")
+        self.view.stop()
+        logger.debug(f"MySelect values: {MySelect.fulldesc}")
+        logger.debug(f"values: {self.values[0]}")
+
+        await inter.send(f'You\'ve selected: "{self.options[0]}", send it?')
+
+        msg = await inter.original_message()
+        await msg.add_reaction(emoji="👍")
+
+        def check(reaction, user):
+            logger.debug("Inside check function")
+            return user == inter.author and str(reaction.emoji) == '👍'
+        try:
+            reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=check)
+        except asyncio.TimeoutError:
+            logger.debug("Timed out")
+            await msg.delete()
+            await inter.send('You\'re just to damn slow.')
+        else:
+            await msg.delete()
+            logger.debug("We are deleteing stuff now")
+
+            # reasonid = str(removaldict[reason]['id'])
+            # subreddit = await redditauth.subreddit("EscapefromTarkov")
+            # remreason = await subreddit.mod.removal_reasons.get_reason(reasonid)
+            # submission = await redditauth.submission(id=urlffinal, lazy=True)
+            # remreasonmsg = str(remreason.message).replace('PLACEHOLDER', urlffinal)
+            # await submission.mod.remove(reason_id=remreason.id)
+            # await submission.mod.send_removal_message(message=remreasonmsg, title=remreason.title)
+            # await ctx.send(f"Sent it, {ctx.author.mention}.  That post is no more.")
+            # await msg.delete()
 
 
 # IN COG:

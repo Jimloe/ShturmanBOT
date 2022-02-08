@@ -286,4 +286,54 @@ async def help_shturman(inter):
 
     await inter.response.send_message(embed=embed)
 
+
+@client.command(aliases=['remove', 'r'])
+async def remove_post(ctx, reason, url):
+    matcher = re.match('\w*://\w*.reddit.com/r/EscapefromTarkov/comments/', url)
+    if not matcher:
+        await ctx.send(f'{ctx.author.mention}, you\'ve sent me a fucked up link.')
+        return
+    try:
+        reason = int(reason)
+    except:
+        await ctx.send(f'{ctx.author.mention}, the reason you provided isn\'t an integer.')
+        return
+
+    urlfstep1 = str(url).replace(matcher.group(0), '')
+    matcher = re.match('\w*', urlfstep1)
+    urlffinal = str(matcher.group(0))
+
+    removaldict = {1: {'id': '1781pn84l7xri', 'name': 'Rule 1:Unrelated Content and Memes'},
+                   2: {'id': '1781qciq3mhyw', 'name': 'Rule 2:Content Guidelines'},
+                   3: {'id': '1781qjs7b2fmo', 'name': 'Rule 3:Abusive/Poor Behavior'},
+                   4: {'id': '1781qngegnpa2', 'name': 'Rule 4:Trading, Begging, and LFG'},
+                   5: {'id': '1781qr2mfgaod', 'name': 'Rule 5:Self Advertisement'},
+                   6: {'id': '1781qw2kouuv2', 'name': 'Rule 6:Giveaways'},
+                   7: {'id': '1781qym93tnhx', 'name': 'Rule 7:Cheating, Exploits, and Piracy'},
+                   8: {'id': '1781r1cyetwki', 'name': 'Rule 8:Reposts'}}
+
+    msg = await ctx.message.channel.send(
+        f"Are you sure you want to remove {url} for `{removaldict[reason]['name']}`? React with :+1:")
+
+    def check(react, user):
+        return react.message.author == msg.author and ctx.message.channel == react.message.channel and react.emoji == '👍'
+
+    try:
+        react = await client.wait_for('reaction_add', timeout=20, check=check)
+    except asyncio.TimeoutError:
+        await msg.delete()
+        await ctx.send('You\'re just to damn slow.')
+    else:
+        await msg.delete()
+        msg = await ctx.send(f"Using `{removaldict[reason]['name']}`, to remove this post: {url}")
+        reasonid = str(removaldict[reason]['id'])
+        subreddit = await redditauth.subreddit("EscapefromTarkov")
+        remreason = await subreddit.mod.removal_reasons.get_reason(reasonid)
+        submission = await redditauth.submission(id=urlffinal, lazy=True)
+        remreasonmsg = str(remreason.message).replace('PLACEHOLDER', urlffinal)
+        await submission.mod.remove(reason_id=remreason.id)
+        await submission.mod.send_removal_message(message=remreasonmsg, title=remreason.title)
+        await ctx.send(f"Sent it, {ctx.author.mention}.  That post is no more.")
+        await msg.delete()
+
 bot.run(config['DISCORD']['token'])  # Authenticate to Discord via our local token
