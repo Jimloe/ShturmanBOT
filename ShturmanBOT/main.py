@@ -189,9 +189,8 @@ async def rule5_enforcer(inter, action='remove'):
 @bot.slash_command(guild_ids=guilds, description="Removes a post and sends a removal reason.")
 @commands.has_role("Moderator")
 async def remove_post(inter: disnake.CommandInteraction, reason, url):
-    logger.info(f"{inter.author.name} is attempting to remove a post: Rule:{reason}, URL={url}")
+    logger.info(f"{inter.author.name} is attempting to remove a post: Rule:{reason}, URL='{url}'")
     matcher = re.match('\w*://\w*.reddit.com/r/EscapefromTarkov/comments/', url)
-
     if not matcher:
         await inter.response.send_message(f'{inter.author.mention}, you\'ve sent me a fucked up link.')
         return
@@ -201,7 +200,7 @@ async def remove_post(inter: disnake.CommandInteraction, reason, url):
         await inter.response.send_message(f'{inter.author.mention}, the reason you provided isn\'t an integer.')
         return
 
-    removalreasons = await ShturReddit.removal_reasons(reason=reason)
+    removalreasons = await ShturReddit.removal_reasons(reason=intreason)
 
     options = []
 

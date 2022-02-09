@@ -161,7 +161,7 @@ class ShturReddit:
         reddit = ShturReddit.reddit_auth()
         subredditr5 = await reddit.subreddit(ShturReddit.subreddit)
         async for submission in subredditr5.stream.submissions():
-            logger.info(f'{submission.title} was submitted')
+            logger.debug(f'{submission.title} was submitted')
             for url in urlmatch:  # Loop through youtube & twitch to see if we've got youtube/twitch submissions
                 if url in submission.url:  # Finds a match
                     caughtpost = submission.permalink  # Store post in a variable so we can make sure we're not catching it later.
