@@ -18,10 +18,10 @@ config.read('config')
 
 # Logging configuration
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(name)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
 file_handler = logging.FileHandler('logfile.log')
-file_handler.setLevel(logging.DEBUG)
+file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(formatter)
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
@@ -131,7 +131,7 @@ class ShturReddit:
 
         async def author_checker(who, link):  # Function for checking posts/comments against our list of devs.
             if who in devs:
-                logger.info(f"Found a match: {who} posted: https://www.reddit.com{link}")
+                logger.info(f"{who} posted: https://www.reddit.com{link}")
                 # Announce a find to Discord
                 await chanannounce.send(f"\n {who} posted: https://www.reddit.com{link}")
 
@@ -165,14 +165,14 @@ class ShturReddit:
             for url in urlmatch:  # Loop through youtube & twitch to see if we've got youtube/twitch submissions
                 if url in submission.url:  # Finds a match
                     caughtpost = submission.permalink  # Store post in a variable so we can make sure we're not catching it later.
-                    logger.info(f'Found a youtube/twitch link: {submission.title}')
+                    logger.debug(f'Found a youtube/twitch link: {submission.title}')
                     try:  # Setting up shadowbanned user.
                         subauthor = submission.author  # Grabs the author.  We want to check their history.
                     except asyncprawcore.Forbidden:
-                        logger.info(f"User shadowbanned:{submission.author}")
+                        logger.debug(f"User shadowbanned:{submission.author}")
                         return "Shadowbanned user"
                     except asyncprawcore.NotFound:
-                        logger.info(f"User doesn't exist:{submission.author}")
+                        logger.debug(f"User doesn't exist:{submission.author}")
                         return "User doesn't exist"
                     else:
                         # Grabs the time of the post.
@@ -180,7 +180,7 @@ class ShturReddit:
                         delta = datetime.timedelta(days=2)
                         timecutoff = oppostime - delta
                         # Create a user object and check their post history
-                        logger.info(f'Checking the history of {subauthor}')
+                        logger.debug(f'Checking the history of {subauthor}')
                         redditor = await reddit.redditor(str(subauthor))
                         async for userhistory in redditor.submissions.new(limit=10):
                             # for userhistory in reddit_login.redditor(str(subauthor)).submissions.new(limit=10): Old - Remove
@@ -192,20 +192,20 @@ class ShturReddit:
                                 pass  # The post has not been removed, so we want to move on to the rest of the script
                             # Checks post time to make sure we're not going too far back and doing excess checking.
                             historyposttime = datetime.datetime.fromtimestamp(userhistory.created_utc)
-                            logger.info(f'Checking post:"{userhistory.title}"')
-                            logger.info(f'Is post time: {historyposttime} between the cutoff: {timecutoff} and now?')
+                            logger.debug(f'Checking post:"{userhistory.title}"')
+                            logger.debug(f'Is post time: {historyposttime} between the cutoff: {timecutoff} and now?')
                             if datetime.datetime.fromtimestamp(userhistory.created_utc) < timecutoff:
-                                logger.info(f'Outside our time window, stopping.')
+                                logger.debug(f'Outside our time window, stopping.')
                                 break
                             # Checks to see if submissions are in our subreddit
                             # If they are, make sure the domain matches twitch or youtube
                             if str(userhistory.subreddit_name_prefixed) == str(
                                     subredditstring) and userhistory.domain in urlmatch:
-                                logger.info(
+                                logger.debug(
                                     f'Found a potential match in the {ShturReddit.subreddit}, checking if it is the OP')
                                 # We want to make sure we're not matching against the original submission.
                                 if userhistory.permalink != caughtpost:
-                                    logger.info(f'We found a match: "{userhistory.title}"')
+                                    logger.debug(f'We found a match: "{userhistory.title}"')
                                     #  Do things like report the post
                                     if action == 'remove':  # Checks to see if we want to remove the post
                                         randhello = ShturReddit.random_hello()
@@ -228,9 +228,9 @@ class ShturReddit:
                                         await submission.report(f'R5 violation check!: {userhistory.id}')
                                         break
                                 else:
-                                    logger.info(f'"{userhistory.title}" is the OP, skipping it')
+                                    logger.debug(f'"{userhistory.title}" is the OP, skipping it')
                             else:
-                                logger.info(f'"{userhistory.title}" is not a media link or within the sub.')
+                                logger.debug(f'"{userhistory.title}" is not a media link or within the sub.')
 
     @staticmethod
     async def removal_reasons(reason):

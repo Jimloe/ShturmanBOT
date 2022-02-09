@@ -13,10 +13,10 @@ from disnake.ext import commands
 
 # Logging configuration
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s-%(levelname)s-%(name)s-%(message)s', datefmt='%Y%m%d:%H:%M:%S')
 file_handler = logging.FileHandler('logfile.log')
-file_handler.setLevel(logging.DEBUG)
+file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(formatter)
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
@@ -179,7 +179,7 @@ async def dev_tracker(inter):
 
 @bot.slash_command(guild_ids=guilds, description="Monitors subreddit for R5 violations.")
 @commands.has_role("Moderator")
-async def rule5_enforcer(inter, action='report'):
+async def rule5_enforcer(inter, action='remove'):
     hello = ShturReddit.random_hello()
     logger.info(f"{inter.author.name} started the Rule 5 enforcer module.")
     await inter.send(f'{hello} {inter.author.mention}!, I\'ll start enforcing Rule 5 on the sub.')
@@ -188,11 +188,7 @@ async def rule5_enforcer(inter, action='report'):
 
 @bot.slash_command(guild_ids=guilds, description="Removes a post and sends a removal reason.")
 @commands.has_role("Moderator")
-async def remove_post(
-        inter: disnake.CommandInteraction,
-        reason=1,
-        url='https://old.reddit.com/r/EscapefromTarkov/comments/siu874/test_remove_post/'
-        ):
+async def remove_post(inter: disnake.CommandInteraction, reason, url):
     logger.info(f"{inter.author.name} is attempting to remove a post: Rule:{reason}, URL={url}")
     matcher = re.match('\w*://\w*.reddit.com/r/EscapefromTarkov/comments/', url)
 
@@ -246,8 +242,7 @@ async def get_reddit_user(inter, username):
 
 
 @bot.slash_command(guild_ids=guilds, description="Gets a reddit post.")
-@commands.has_role("Moderator")
-async def get_reddit_post(inter, pid='snj2ze'):  # my removed post: siu874
+async def get_reddit_post(inter, pid):  # my removed post: siu874
     await inter.response.send_message(f"Getting the post!")
     results = await ShturReddit.get_reddit_post(pid)
     if results:
