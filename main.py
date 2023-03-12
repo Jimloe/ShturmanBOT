@@ -25,29 +25,9 @@ reddit = reddit_auth()  # Authenticate to Reddit using Shturman creds.
 # Setup allowed mentions by Discord bot
 disnake.AllowedMentions(everyone=True, users=True, roles=True, replied_user=True)
 
-guilds = [937647740270280734]  # Test server
-#guilds = [1079964891668021258]  # EFT server
+guilds = [1079964891668021258, 937647740270280734]  # EFT Server, Test server
 
-
-def embeder(description):  # Function to allow us to easily build embeded messages with a default look.
-    embed = disnake.Embed(
-        title="Usable commands",
-        description=description,
-        color=disnake.Colour.yellow(),
-        timestamp=datetime.datetime.now(),
-    )
-    embed.set_author(
-        name="ShturmanBOT",
-        url="https://github.com/Jimloe",
-        icon_url="https://i.imgur.com/OcjbuK1.jpg"  # Shturmans face
-    )
-    embed.set_footer(
-        text="Created by Jimlo#4389",
-        icon_url="https://i.imgur.com/SGRBBDo.jpg"  # Jimlos Avatar
-    )
-    embed.set_thumbnail(url="https://i.imgur.com/bkzBSgY.png?1")  # EFT Snoo Thumbnail
-    # embed.set_image(url="https://i.imgur.com/p51DB4k.jpg")  # Use this if you want a large footer image.
-    return embed
+startup_time = datetime.datetime.now()
 
 
 @bot.event  # Bot has launched and is ready.
@@ -80,46 +60,23 @@ async def on_ready():
                 await asyncio.sleep(30)
         await asyncio.sleep(30)
 
+
 @bot.slash_command(guild_ids=guilds)
-async def rules(inter):
-    await inter.response.send_message(
-        f'Hello {inter.author.mention}!',
-        components=[
-            disnake.ui.Button(label="R1", style=disnake.ButtonStyle.primary, custom_id="R1"),
-            disnake.ui.Button(label="R2", style=disnake.ButtonStyle.secondary, custom_id="R2"),
-            disnake.ui.Button(label="R3", style=disnake.ButtonStyle.success, custom_id="R3"),
-            disnake.ui.Button(label="R4", style=disnake.ButtonStyle.danger, custom_id="R4"),
-            disnake.ui.Button(label="R5", style=disnake.ButtonStyle.primary, custom_id="R5"),
-            disnake.ui.Button(label="R6", style=disnake.ButtonStyle.secondary, custom_id="R6"),
-            disnake.ui.Button(label="R7", style=disnake.ButtonStyle.success, custom_id="R7"),
-            disnake.ui.Button(label="R8", style=disnake.ButtonStyle.danger, custom_id="R8"),
-        ],
-    )
+async def uptime(inter):
+    uptime_stamp = datetime.datetime.now()
+    difference = uptime_stamp - startup_time
 
-@bot.listen("on_button_click")
-async def help_listener(inter: disnake.MessageInteraction):
-    if inter.component.custom_id not in ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"]:
-        # We filter out any other button presses except
-        # the components we wish to process.
-        return
+    # Extract the days, seconds, and microseconds from the time difference
+    total_seconds = difference.total_seconds()
+    days = divmod(total_seconds, 86400)[0]  # 1 day = 86400 seconds
+    seconds = total_seconds % 86400
+    # Convert the remaining seconds to hours, minutes, and seconds
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    calc_uptime = f"{int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds} seconds"
 
-    if inter.component.custom_id == "R1":
-        await inter.response.send_message("You hit R1, yay!")
-    elif inter.component.custom_id == "R2":
-        await inter.response.send_message("You hit R2, yay!")
-    elif inter.component.custom_id == "R3":
-        await inter.response.send_message("You hit R3, yay!")
-    elif inter.component.custom_id == "R4":
-        await inter.response.send_message("You hit R4, yay!")
-    elif inter.component.custom_id == "R5":
-        await inter.response.send_message("You hit R5, yay!")
-    elif inter.component.custom_id == "R6":
-        await inter.response.send_message("You hit R6, yay!")
-    elif inter.component.custom_id == "R7":
-        await inter.response.send_message("You hit R7, yay!")
-    elif inter.component.custom_id == "R8":
-        await inter.response.send_message("You hit R8, yay!")
-
+    await inter.send(f'Hello {inter.author.mention}, I\'ve been running for: {calc_uptime}')
 
 
 bot.run(config['DISCORD']['token'])  # Authenticate to Discord via our local token
