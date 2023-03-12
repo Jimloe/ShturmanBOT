@@ -78,5 +78,51 @@ async def uptime(inter):
 
     await inter.send(f'Hello {inter.author.mention}, I\'ve been running for: {calc_uptime}')
 
+    
+@bot.slash_command(guild_ids=guilds)
+async def modnews(inter):
+    await inter.response.send_message(f'Hello {inter.author.mention}, I\'m tracking r/modnews now')
+    announcement_channel = bot.get_channel(1084434833339580456)  # EFT Mod News channel
+
+    for tag in announcement_channel.available_tags:
+        if tag.name == 'News':
+            news_tag_id = tag
+
+    modnews_stream = await reddit_auth().subreddit('modnews')
+    async for submission in modnews_stream.stream.submissions(skip_existing=True):
+        name = submission.title
+        content = f'https://www.reddit.com{submission.url}'
+        await announcement_channel.create_thread(name=name, content=content, applied_tags=[news_tag_id])
+
+
+@bot.slash_command(guild_ids=guilds)
+async def devtrack(inter):
+    await inter.response.send_message(f'Hello {inter.author.mention}, I\'m tracking Devs now')
+
+    devannounce = bot.get_channel(1084434333399523380)  # EFT announcements channel
+
+    async def author_checker(who, link):  # Function for checking posts/comments against our list of devs.
+        if who in devs:
+            print("Found a match: https://www.reddit.com", link)
+            await devannounce.send(f"\n {who} posted: https://www.reddit.com{link}")
+
+    # We create two streams here, one for posts and one for comments.
+    # We combine them later on in the run() function
+    async def handle_posts(subreddit):
+        async for submission in subreddit.stream.submissions(skip_existing=True):
+            await author_checker(submission.author, submission.permalink)
+
+    async def handle_comments(subreddit):
+        async for comment in subreddit.stream.comments(skip_existing=True):
+            await author_checker(comment.author, comment.permalink)
+
+    async def run():  # Async function that combines both posts and comments.
+        subreddit = await reddit.subreddit(subreddit_name)
+        while True:
+            things = await asyncio.gather(handle_posts(subreddit), handle_comments(subreddit))
+            return things
+
+    await run()
+
 
 bot.run(config['DISCORD']['token'])  # Authenticate to Discord via our local token
